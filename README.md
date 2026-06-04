@@ -23,5 +23,3 @@ I am currently looking for a **voluntary summer internship in 2026** (Schülerpr
 If you are an engineering manager or recruiter looking for a passionate intern who already knows his way around a microcontroller:
 *   [Connect with me on LinkedIn](https://www.linkedin.com/in/jeremy-darko-a0a850413/)
 *   Reach out via Email: Jeremyyeboahdarko@gmail.com
----
-*"I don't just write code – I build hardware that runs it."* ⚡
