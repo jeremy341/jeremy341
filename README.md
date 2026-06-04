@@ -13,7 +13,7 @@ I am currently looking for a **voluntary summer internship in 2026** (Schülerpr
 *   **Concepts:** Embedded Firmware, Serial Communication, LittleFS,
 
 ### Featured Project
-*   🕰️ **[ESP32 Smart Alarm Clock](https://github.com/jeremy341/esp32-alarm-clock):** A custom-built,alarm clock. Features a self-written C++ firmware, LittleFS storage, WiFi-NTP sync, and a AI made WebSerial-based UI configuration app. Placed inside a custom selfmade CAD-designed housing. 
+*    **[ESP32 Smart Alarm Clock](https://github.com/jeremy341/esp32-alarm-clock):** A custom-built,alarm clock. Features a self-written C++ firmware, LittleFS storage, WiFi-NTP sync, and a AI made WebSerial-based UI configuration app. Placed inside a custom selfmade CAD-designed housing. 
 
 ### Previous Experience
 *   **Siemens Energy:** Internship in Product Development & CAD 
