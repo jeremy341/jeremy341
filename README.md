@@ -10,7 +10,7 @@ I am currently looking for a **voluntary summer internship in 2026** (Schülerpr
 *   **Languages:** C++, C, Python,(early stages)
 *   **Hardware / Microcontrollers:** ESP32, Arduino, I2C / SPI
 *   **Tools & Workflows:** KiCAD (Schematics & PCB Layout), PlatformIO, CAD (Fusion 360), Git
-*   **Concepts:** Embedded Firmware, Serial Communication, LittleFS, b
+*   **Concepts:** Embedded Firmware, Serial Communication, LittleFS,
 
 ### 🚀 Featured Project
 *   🕰️ **[ESP32 Smart Alarm Clock](https://github.com/jeremy341/esp32-alarm-clock):** A custom-built,alarm clock. Features a self-written C++ firmware, LittleFS storage, WiFi-NTP sync, and a AI made WebSerial-based UI configuration app. Placed inside a custom selfmade CAD-designed housing. 
