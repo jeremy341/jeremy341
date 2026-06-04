@@ -6,20 +6,20 @@ I am a highly motivated 16-year-old high school student with a deep passion for 
 
 I am currently looking for a **voluntary summer internship in 2026** (Schülerpraktikum) in the fields of **IoT, Embedded Systems, or Software R&D** around the Rhein-Ruhr area.
 
-### 🛠️ Tech Stack & Skills
+### Tech Stack & Skills
 *   **Languages:** C++, C, Python,(early stages)
 *   **Hardware / Microcontrollers:** ESP32, Arduino, I2C / SPI
 *   **Tools & Workflows:** KiCAD (Schematics & PCB Layout), PlatformIO, CAD (Fusion 360), Git
 *   **Concepts:** Embedded Firmware, Serial Communication, LittleFS,
 
-### 🚀 Featured Project
+### Featured Project
 *   🕰️ **[ESP32 Smart Alarm Clock](https://github.com/jeremy341/esp32-alarm-clock):** A custom-built,alarm clock. Features a self-written C++ firmware, LittleFS storage, WiFi-NTP sync, and a AI made WebSerial-based UI configuration app. Placed inside a custom selfmade CAD-designed housing. 
 
-### 💼 Previous Experience
+### Previous Experience
 *   **Siemens Energy:** Internship in Product Development & CAD 
 *   **Hochschule Ruhr West:** MINT-Program (Electronics & Python focus)
 
-### 📫 Let's Connect!
+### Let's Connect!
 If you are an engineering manager or recruiter looking for a passionate intern who already knows his way around a microcontroller:
 *   [Connect with me on LinkedIn](https://www.linkedin.com/in/jeremy-darko-a0a850413/)
 *   Reach out via Email: Jeremyyeboahdarko@gmail.com
