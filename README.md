@@ -1,6 +1,6 @@
 # Hi there, I'm Jeremy!
 
-**High School Student (Class of 2028) | Aspiring Embedded Systems Engineer | Based in Mülheim (NRW), Germany**
+**High School Student (Class of 2028) | Aspiring Embedded Systems Engineer | Based in NRW, Germany**
 
 I am a highly motivated 16-year-old high school student with a deep passion for hardware, electronics, and software development. I love building things from scratch—from designing my own PCBs to writing the underlying C++ firmware. 
 
