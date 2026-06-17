@@ -15,6 +15,9 @@ I am currently looking for a **voluntary summer internship in 2026** (Schülerpr
 ### Featured Project
 *    **[ESP32 Smart Alarm Clock](https://github.com/jeremy341/esp32-alarm-clock):** A custom-built,alarm clock. Features a self-written C++ firmware, LittleFS storage, WiFi-NTP sync, and a AI made WebSerial-based UI configuration app. Placed inside a custom selfmade CAD-designed housing. 
 
+*    **[Poorup](https://github.com/jeremy341/Poorup):** Poorup is a multiplayer board game inspired by Monopoly, playable entirely in the browser with no downloads or accounts required. Players join a shared room using a room code, buy and trade properties, build houses and hotels, and try to bankrupt each other. The game runs in real time using WebSockets.
+
+
 ### Previous Experience
 *   **Siemens Energy:** Internship in Product Development & CAD 
 *   **Hochschule Ruhr West:** MINT-Program (Electronics & Python focus)
