@@ -2,6 +2,7 @@
 # Generated SVG files are committed automatically by the refresh workflow.
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import html
 import json
@@ -174,42 +175,66 @@ def format_seconds(value: float | int) -> str:
 def hackatime_metrics(token: str | None) -> dict[str, str]:
     if not token:
         return {}
-    try:
-        response = request_json(
+
+    endpoints = [
+        (
+            "https://hackatime.hackclub.com/api/hackatime/v1/users/current/stats/all_time",
+            "Basic " + base64.b64encode(token.encode("utf-8")).decode("ascii"),
+        ),
+        (
             f"{HACKATIME_API}?range=all_time",
-            token,
-            hackatime=True,
-        )
-        if not isinstance(response, dict):
-            return {}
-        data = response.get("data", response)
-        total = (
-            data.get("human_readable_total")
-            or data.get("human_readable_total_including_other_language")
-            or (
-                format_seconds(data["total_seconds"])
-                if data.get("total_seconds") is not None
-                else None
+            f"Bearer {token}",
+        ),
+    ]
+
+    response: dict[str, Any] | None = None
+    for url, authorization in endpoints:
+        try:
+            request = urllib.request.Request(
+                url,
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": authorization,
+                    "User-Agent": "jeremy341-profile",
+                },
             )
-        )
-        languages = data.get("languages", [])[:3]
-        projects = data.get("projects", [])[:3]
-        result: dict[str, str] = {}
-        if total:
-            result["time"] = str(total)
-        if languages:
-            result["languages"] = " · ".join(
-                f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
-                for item in languages
-            )
-        if projects:
-            result["projects"] = " · ".join(
-                f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
-                for item in projects
-            )
-        return result
-    except Exception:
+            with urllib.request.urlopen(request, timeout=30) as raw:
+                candidate = json.load(raw)
+            if isinstance(candidate, dict):
+                response = candidate
+                break
+        except Exception:
+            continue
+
+    if response is None:
         return {}
+
+    data = response.get("data", response)
+    total = (
+        data.get("human_readable_total")
+        or data.get("human_readable_total_including_other_language")
+        or (
+            format_seconds(data["total_seconds"])
+            if data.get("total_seconds") is not None
+            else None
+        )
+    )
+    languages = data.get("languages", [])[:3]
+    projects = data.get("projects", [])[:3]
+    result: dict[str, str] = {}
+    if total:
+        result["time"] = str(total)
+    if languages:
+        result["languages"] = " · ".join(
+            f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
+            for item in languages
+        )
+    if projects:
+        result["projects"] = " · ".join(
+            f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
+            for item in projects
+        )
+    return result
 
 
 def current_age() -> int:
