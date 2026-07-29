@@ -260,7 +260,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         svg_text(58, 36, "PowerShell 7.5.2", "chrome"),
         svg_text(301, 35, "+", "chrome"),
         svg_text(332, 35, "⌄", "chrome-muted"),
-        svg_text(650, 34, f"jeremy341 / profile.ps1 / {synced}", "chrome-muted"),
+        svg_text(650, 34, f"SYNC / {synced}", "chrome-muted"),
         f'<rect x="844" y="0" width="52" height="52" fill="transparent"/>',
         f'<rect x="896" y="0" width="52" height="52" fill="transparent"/>',
         f'<rect x="948" y="0" width="52" height="52" fill="transparent"/>',
