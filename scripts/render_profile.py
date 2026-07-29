@@ -39,10 +39,6 @@ def github_stats(token: str | None) -> tuple[int, int, int | None]:
           }
         }
         """
-        data = request_json(
-            "https://api.github.com/graphql",
-            token,
-        ) if False else None
         payload = json.dumps({"query": query, "variables": {"login": USERNAME}}).encode()
         req = urllib.request.Request(
             "https://api.github.com/graphql",
