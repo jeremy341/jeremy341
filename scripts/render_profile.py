@@ -65,16 +65,16 @@ def github_stats(token: str | None) -> tuple[int, int, int | None]:
 
 def hackatime_stats(token: str | None) -> str:
     if not token:
-        return "not connected"
+        return ""
     try:
         data = request_json(f"{HACKATIME_API}?range=last_7_days", token)
         languages = data.get("data", {}).get("languages", [])
         top = languages[:3]
         if not top:
-            return "no recent activity"
+            return ""
         return "  |  ".join(f"{item['name']} {item.get('text', '')}" for item in top)
     except Exception:
-        return "temporarily unavailable"
+        return ""
 
 
 def age() -> str:
@@ -105,7 +105,11 @@ def make_svg(theme: dict[str, str], stats: tuple[int, int, int | None], hackatim
         ("Tools", "PlatformIO, Git, FastAPI, Socket.IO"),
         ("GitHub", f"{repos} public repos  |  {stars} stars  |  {contribution_text} contributions"),
         ("Portfolio", "A+  |  MIRA  ·  NIMBL  ·  ESP32-S3 Alarm Clock"),
-        ("Hackatime", hackatime),
+    ]
+    if hackatime:
+        rows.append(("Hackatime", hackatime))
+    rows += [
+        ("Status", "building in public"),
     ]
     text = []
     y = 108
