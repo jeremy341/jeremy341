@@ -1,15 +1,4 @@
 {
-  "attempts": [
-    {
-      "endpoint": "wakatime_compatible",
-      "error_type": "HTTPError",
-      "http_status": 404
-    },
-    {
-      "endpoint": "native_stats",
-      "error_type": "HTTPError",
-      "http_status": 401
-    }
-  ],
-  "key_present": true
+  "attempts": [],
+  "key_present": false
 }
