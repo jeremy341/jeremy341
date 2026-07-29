@@ -7,6 +7,7 @@ import datetime as dt
 import html
 import json
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -20,6 +21,7 @@ ASSETS = ROOT / "assets"
 GITHUB_API = "https://api.github.com"
 GRAPHQL_API = "https://api.github.com/graphql"
 HACKATIME_API = "https://hackatime.hackclub.com/api/v1/stats"
+HACKATIME_DIAGNOSTICS: dict[str, Any] = {}
 
 THEMES = {
     "dark": {
@@ -173,22 +175,27 @@ def format_seconds(value: float | int) -> str:
 
 
 def hackatime_metrics(token: str | None) -> dict[str, str]:
+    global HACKATIME_DIAGNOSTICS
+    HACKATIME_DIAGNOSTICS = {"key_present": bool(token), "attempts": []}
     if not token:
         return {}
 
     endpoints = [
         (
+            "wakatime_compatible",
             "https://hackatime.hackclub.com/api/hackatime/v1/users/current/stats/all_time",
             "Basic " + base64.b64encode(token.encode("utf-8")).decode("ascii"),
         ),
         (
+            "native_stats",
             f"{HACKATIME_API}?range=all_time",
             f"Bearer {token}",
         ),
     ]
 
     response: dict[str, Any] | None = None
-    for url, authorization in endpoints:
+    for name, url, authorization in endpoints:
+        attempt: dict[str, Any] = {"endpoint": name}
         try:
             request = urllib.request.Request(
                 url,
@@ -199,12 +206,23 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
                 },
             )
             with urllib.request.urlopen(request, timeout=30) as raw:
+                attempt["http_status"] = raw.status
                 candidate = json.load(raw)
+            attempt["response_type"] = type(candidate).__name__
             if isinstance(candidate, dict):
+                attempt["top_level_keys"] = sorted(candidate.keys())
+                data_candidate = candidate.get("data")
+                if isinstance(data_candidate, dict):
+                    attempt["data_keys"] = sorted(data_candidate.keys())
                 response = candidate
+                HACKATIME_DIAGNOSTICS["attempts"].append(attempt)
                 break
-        except Exception:
-            continue
+        except urllib.error.HTTPError as error:
+            attempt["http_status"] = error.code
+            attempt["error_type"] = type(error).__name__
+        except Exception as error:
+            attempt["error_type"] = type(error).__name__
+        HACKATIME_DIAGNOSTICS["attempts"].append(attempt)
 
     if response is None:
         return {}
@@ -234,6 +252,7 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
             f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
             for item in projects
         )
+    HACKATIME_DIAGNOSTICS["parsed_fields"] = sorted(result.keys())
     return result
 
 
@@ -373,6 +392,10 @@ def main() -> None:
     github_token = os.getenv("PROFILE_GH_TOKEN") or os.getenv("GITHUB_TOKEN")
     github = github_metrics(github_token)
     hackatime = hackatime_metrics(os.getenv("HACKATIME_API_KEY"))
+    (ASSETS / "hackatime-debug.json").write_text(
+        json.dumps(HACKATIME_DIAGNOSTICS, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
     for theme_name, theme in THEMES.items():
         (ASSETS / f"profile-{theme_name}.svg").write_text(
