@@ -19,13 +19,6 @@ GITHUB_API = "https://api.github.com"
 GRAPHQL_API = "https://api.github.com/graphql"
 HACKATIME_API = "https://hackatime.hackclub.com/api/v1/stats"
 
-PROJECTS = [
-    ("01", "MIRA", "Edge-AI recycling automation", "MIRA-AI"),
-    ("02", "NIMBL", "Token-efficient AI coding companion", "NIMBL"),
-    ("03", "ESP32-S3 ALARM CLOCK", "Custom PCB, firmware and enclosure", "esp32-alarm-clock"),
-    ("04", "POORUP", "Real-time multiplayer board game", "Poorup"),
-]
-
 THEMES = {
     "dark": {
         "bg": "#050505", "panel": "#0b0b0b", "text": "#ffffff",
@@ -235,102 +228,113 @@ def svg_text(x: int, y: int, value: object, css_class: str, anchor: str | None =
 
 
 def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime: dict[str, str]) -> str:
-    left_rows = [
-        ("AGE", f"{current_age()} years"),
-        ("LOCATION", "NRW, Germany"),
-        ("ROLE", "Student · embedded systems"),
-        ("FOCUS", "Hardware · firmware · applied AI"),
-        ("BUILDING", "MIRA"),
-    ]
-    right_rows = [
-        ("PUBLIC REPOSITORIES", github["repositories"]),
-        ("TOTAL STARS", github["stars"]),
-        ("TOTAL COMMITS", github["commits"]),
-        ("CODE CHANGES", github["code"]),
-    ]
-    if hackatime.get("time"):
-        right_rows.append(("HACKATIME TOTAL", hackatime["time"]))
+    synced = dt.datetime.now(dt.timezone.utc)
+    revision = synced.strftime("%Y.%m.%d")
+    last_sync = synced.strftime("%Y-%m-%d / %H:%M UTC")
 
     parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="540" viewBox="0 0 1000 540" role="img" aria-label="Jeremy Darko system profile">',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640" role="img" aria-label="Jeremy Darko engineering system profile">',
         "<style>",
-        f".title{{fill:{theme['text']};font:700 28px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        f".subtitle{{fill:{theme['muted']};font:14px 'JetBrains Mono',Consolas,monospace}}",
-        f".section{{fill:{theme['text']};font:700 13px 'JetBrains Mono',Consolas,monospace;letter-spacing:2px}}",
-        f".label{{fill:{theme['muted']};font:12px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        f".value{{fill:{theme['text']};font:15px 'JetBrains Mono',Consolas,monospace}}",
-        f".status{{fill:{theme['bg']};font:700 11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".hero{{fill:{theme['text']};font:700 26px 'JetBrains Mono',Consolas,monospace;letter-spacing:1.4px}}",
+        f".meta{{fill:{theme['muted']};font:11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".section{{fill:{theme['text']};font:700 12px 'JetBrains Mono',Consolas,monospace;letter-spacing:2px}}",
+        f".label{{fill:{theme['muted']};font:11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".value{{fill:{theme['text']};font:14px 'JetBrains Mono',Consolas,monospace}}",
+        f".module{{fill:{theme['text']};font:700 20px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".status{{fill:{theme['bg']};font:700 10px 'JetBrains Mono',Consolas,monospace;letter-spacing:1.5px}}",
         "</style>",
-        f'<rect width="1000" height="540" rx="16" fill="{theme["bg"]}"/>',
-        f'<rect x="1" y="1" width="998" height="538" rx="15" fill="none" stroke="{theme["line"]}"/>',
-        svg_text(38, 52, "JEREMY DARKO", "title"),
-        svg_text(38, 77, "SYSTEM PROFILE / EMBEDDED · SOFTWARE · AI", "subtitle"),
-        f'<rect x="872" y="31" width="90" height="28" rx="14" fill="{theme["accent"]}"/>',
-        svg_text(917, 50, "ONLINE", "status", "middle"),
-        f'<line x1="38" y1="102" x2="962" y2="102" stroke="{theme["line"]}"/>',
-        svg_text(38, 135, "IDENTITY", "section"),
-        svg_text(520, 135, "LIVE METRICS", "section"),
-        f'<line x1="482" y1="122" x2="482" y2="365" stroke="{theme["line"]}"/>',
+        f'<rect width="1000" height="640" fill="{theme["bg"]}"/>',
+        f'<rect x="1" y="1" width="998" height="638" rx="3" fill="none" stroke="{theme["line"]}"/>',
+        f'<rect x="12" y="12" width="976" height="616" rx="2" fill="none" stroke="{theme["line"]}"/>',
+        # Technical reference marks
+        f'<path d="M12 34h14 M12 606h14 M974 34h14 M974 606h14 M36 12v14 M964 12v14 M36 614v14 M964 614v14" stroke="{theme["text"]}" stroke-width="1"/>',
+        f'<circle cx="500" cy="12" r="3" fill="{theme["bg"]}" stroke="{theme["text"]}"/>',
+        f'<circle cx="500" cy="628" r="3" fill="{theme["bg"]}" stroke="{theme["text"]}"/>',
+
+        svg_text(36, 48, "JDK-001 / SYSTEM PROFILE", "hero"),
+        svg_text(36, 72, "EMBEDDED SYSTEMS · SOFTWARE · APPLIED AI", "meta"),
+        svg_text(672, 43, f"REV / {revision}", "meta"),
+        svg_text(672, 65, f"SYNC / {last_sync}", "meta"),
+        f'<rect x="895" y="31" width="67" height="28" fill="{theme["accent"]}"/>',
+        svg_text(928, 50, "SYS.OK", "status", "middle"),
+        f'<line x1="36" y1="96" x2="964" y2="96" stroke="{theme["line"]}"/>',
+        f'<circle cx="36" cy="96" r="3" fill="{theme["text"]}"/>',
+        f'<circle cx="964" cy="96" r="3" fill="{theme["text"]}"/>',
+
+        svg_text(36, 127, "IDENTITY / 01", "section"),
+        svg_text(524, 127, "DEVELOPMENT METRICS / 02", "section"),
+        f'<line x1="500" y1="112" x2="500" y2="304" stroke="{theme["line"]}"/>',
     ]
 
-    y = 172
-    for label, value in left_rows:
-        parts.extend([
-            svg_text(38, y, label, "label"),
-            svg_text(165, y, value, "value"),
-        ])
-        y += 43
-
-    y = 172
-    for label, value in right_rows:
-        parts.extend([
-            svg_text(520, y, label, "label"),
-            svg_text(710, y, value, "value"),
-        ])
-        y += 43
+    identity = [
+        ("AGE", f"{current_age()} YRS"),
+        ("LOCATION", "NRW / DE"),
+        ("ROLE", "STUDENT · EMBEDDED SYSTEMS"),
+        ("TARGET", "HARDWARE R&D"),
+    ]
+    metrics = [
+        ("PUBLIC REPOSITORIES", github["repositories"]),
+        ("TOTAL STARS", github["stars"]),
+        ("AUTHORED COMMITS", github["commits"]),
+        ("CODE DELTA", github["code"]),
+    ]
+    y = 165
+    for label, value in identity:
+        parts.extend([svg_text(36, y, label, "label"), svg_text(158, y, value, "value")])
+        y += 42
+    y = 165
+    for label, value in metrics:
+        parts.extend([svg_text(524, y, label, "label"), svg_text(716, y, value, "value")])
+        y += 42
 
     parts.extend([
-        f'<line x1="38" y1="382" x2="962" y2="382" stroke="{theme["line"]}"/>',
-        svg_text(38, 413, "STACK", "section"),
-        svg_text(38, 443, "C++ · C · Python · TypeScript · JavaScript", "value"),
-        svg_text(520, 413, "HARDWARE + TOOLS", "section"),
-        svg_text(520, 443, "ESP32 · KiCad · PlatformIO · Fusion 360", "value"),
-        f'<line x1="38" y1="466" x2="962" y2="466" stroke="{theme["line"]}"/>',
+        f'<line x1="36" y1="320" x2="964" y2="320" stroke="{theme["line"]}"/>',
+        svg_text(36, 350, "ACTIVE MODULE / 03", "section"),
+        svg_text(36, 389, "MIRA", "module"),
+        svg_text(36, 416, "MACHINE INTELLIGENCE FOR RECYCLING AUTOMATION", "meta"),
+        svg_text(690, 370, "STATE", "label"),
+        svg_text(790, 370, "IN DEVELOPMENT", "value"),
+        svg_text(690, 400, "TARGET", "label"),
+        svg_text(790, 400, "EDGE DEPLOYMENT", "value"),
+        svg_text(690, 430, "CLASS", "label"),
+        svg_text(790, 430, "COMPUTER VISION", "value"),
+
+        f'<line x1="36" y1="454" x2="964" y2="454" stroke="{theme["line"]}"/>',
+        svg_text(36, 484, "TOOLCHAIN / 04", "section"),
+        svg_text(36, 516, "LANG", "label"),
+        svg_text(112, 516, "C++ · C · PYTHON · TYPESCRIPT · JAVASCRIPT", "value"),
+        svg_text(36, 546, "HW", "label"),
+        svg_text(112, 546, "ESP32 · ARDUINO · I²C · SPI · CUSTOM PCB", "value"),
+        svg_text(524, 516, "CAD", "label"),
+        svg_text(600, 516, "KICAD · FUSION 360", "value"),
+        svg_text(524, 546, "BUILD", "label"),
+        svg_text(600, 546, "PLATFORMIO · GIT · FASTAPI", "value"),
+
+        f'<line x1="36" y1="570" x2="964" y2="570" stroke="{theme["line"]}"/>',
+        svg_text(36, 600, "ACTIVITY / 05", "section"),
     ])
 
     if hackatime:
+        activity = "TOTAL " + hackatime.get("time", "—")
+        languages = hackatime.get("languages", "")
+        projects = hackatime.get("projects", "")
         parts.extend([
-            svg_text(38, 495, "HACKATIME / ALL TIME", "section"),
-            svg_text(38, 522, hackatime.get("languages", "Languages unavailable")[:55], "subtitle"),
-            svg_text(520, 522, hackatime.get("projects", "Projects unavailable")[:55], "subtitle"),
+            svg_text(192, 600, activity[:30], "value"),
+            svg_text(420, 600, languages[:42], "meta"),
+            svg_text(964, 600, projects[:42], "meta", "end"),
         ])
     else:
         parts.extend([
-            svg_text(38, 497, "SELECTED PROJECTS", "section"),
-            svg_text(38, 522, "Open a project card below to view its repository.", "subtitle"),
+            svg_text(192, 600, "GITHUB API / DAILY REFRESH", "value"),
+            svg_text(964, 600, "HACKATIME / OPTIONAL", "meta", "end"),
         ])
 
-    parts.append("</svg>")
-    return "".join(parts)
-
-
-def render_project_card(theme: dict[str, str], index: str, title: str, description: str) -> str:
-    return "".join([
-        '<svg xmlns="http://www.w3.org/2000/svg" width="485" height="112" viewBox="0 0 485 112" role="img">',
-        "<style>",
-        f".index{{fill:{theme['muted']};font:12px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        f".title{{fill:{theme['text']};font:700 17px 'JetBrains Mono',Consolas,monospace}}",
-        f".desc{{fill:{theme['muted']};font:12px 'JetBrains Mono',Consolas,monospace}}",
-        f".open{{fill:{theme['text']};font:700 11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        "</style>",
-        f'<rect width="485" height="112" rx="12" fill="{theme["panel"]}"/>',
-        f'<rect x="1" y="1" width="483" height="110" rx="11" fill="none" stroke="{theme["line"]}"/>',
-        svg_text(24, 28, index, "index"),
-        svg_text(24, 55, title, "title"),
-        svg_text(24, 78, description, "desc"),
-        svg_text(461, 94, "OPEN REPOSITORY →", "open", "end"),
+    parts.extend([
+        svg_text(36, 621, "REF JDK-PROFILE-001", "meta"),
+        svg_text(964, 621, "DATA SCOPE / PUBLIC REPOSITORIES", "meta", "end"),
         "</svg>",
     ])
+    return "".join(parts)
 
 
 def main() -> None:
@@ -344,12 +348,6 @@ def main() -> None:
             render_system_card(theme, github, hackatime),
             encoding="utf-8",
         )
-        for index, title, description, repository in PROJECTS:
-            slug = repository.lower()
-            (ASSETS / f"project-{slug}-{theme_name}.svg").write_text(
-                render_project_card(theme, index, title, description),
-                encoding="utf-8",
-            )
 
 
 if __name__ == "__main__":
