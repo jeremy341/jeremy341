@@ -2,12 +2,10 @@
 # Generated SVG files are committed automatically by the refresh workflow.
 from __future__ import annotations
 
-import base64
 import datetime as dt
 import html
 import json
 import os
-import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -20,8 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 GITHUB_API = "https://api.github.com"
 GRAPHQL_API = "https://api.github.com/graphql"
-HACKATIME_API = "https://hackatime.hackclub.com/api/v1/stats"
-HACKATIME_DIAGNOSTICS: dict[str, Any] = {}
+HACKATIME_API = "https://hackatime.hackclub.com/api/v1/authenticated"
 
 THEMES = {
     "dark": {
@@ -175,86 +172,51 @@ def format_seconds(value: float | int) -> str:
 
 
 def hackatime_metrics(token: str | None) -> dict[str, str]:
-    global HACKATIME_DIAGNOSTICS
-    HACKATIME_DIAGNOSTICS = {"key_present": bool(token), "attempts": []}
     if not token:
         return {}
 
-    endpoints = [
-        (
-            "wakatime_compatible",
-            "https://hackatime.hackclub.com/api/hackatime/v1/users/current/stats/all_time",
-            "Basic " + base64.b64encode(token.encode("utf-8")).decode("ascii"),
-        ),
-        (
-            "native_stats",
-            f"{HACKATIME_API}?range=all_time",
-            f"Bearer {token}",
-        ),
-    ]
+    today = dt.date.today()
+    start_date = BIRTH_DATE.isoformat()
+    end_date = today.isoformat()
+    endpoints = {
+        "hours": f"{HACKATIME_API}/hours?{urllib.parse.urlencode({'start_date': start_date, 'end_date': end_date})}",
+        "streak": f"{HACKATIME_API}/streak",
+        "projects": f"{HACKATIME_API}/projects?include_archived=false",
+    }
 
-    response: dict[str, Any] | None = None
-    for name, url, authorization in endpoints:
-        attempt: dict[str, Any] = {"endpoint": name}
+    responses: dict[str, dict[str, Any]] = {}
+    for name, url in endpoints.items():
         try:
-            request = urllib.request.Request(
-                url,
-                headers={
-                    "Accept": "application/json",
-                    "Authorization": authorization,
-                    "User-Agent": "jeremy341-profile",
-                },
-            )
-            with urllib.request.urlopen(request, timeout=30) as raw:
-                attempt["http_status"] = raw.status
-                candidate = json.load(raw)
-            attempt["response_type"] = type(candidate).__name__
-            if isinstance(candidate, dict):
-                attempt["top_level_keys"] = sorted(candidate.keys())
-                data_candidate = candidate.get("data")
-                if isinstance(data_candidate, dict):
-                    attempt["data_keys"] = sorted(data_candidate.keys())
-                response = candidate
-                HACKATIME_DIAGNOSTICS["attempts"].append(attempt)
-                break
-        except urllib.error.HTTPError as error:
-            attempt["http_status"] = error.code
-            attempt["error_type"] = type(error).__name__
-        except Exception as error:
-            attempt["error_type"] = type(error).__name__
-        HACKATIME_DIAGNOSTICS["attempts"].append(attempt)
+            response = request_json(url, token, hackatime=True)
+            if isinstance(response, dict):
+                responses[name] = response
+        except Exception:
+            continue
 
-    if response is None:
-        return {}
-
-    data = response.get("data", response)
-    total = (
-        data.get("human_readable_total")
-        or data.get("human_readable_total_including_other_language")
-        or (
-            format_seconds(data["total_seconds"])
-            if data.get("total_seconds") is not None
-            else None
-        )
-    )
-    languages = data.get("languages", [])[:3]
-    projects = data.get("projects", [])[:3]
     result: dict[str, str] = {}
-    if total:
-        result["time"] = str(total)
-    if languages:
-        result["languages"] = " · ".join(
-            f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
-            for item in languages
-        )
-    if projects:
-        result["projects"] = " · ".join(
-            f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
-            for item in projects
-        )
-    HACKATIME_DIAGNOSTICS["parsed_fields"] = sorted(result.keys())
-    return result
+    total_seconds = responses.get("hours", {}).get("total_seconds")
+    if total_seconds is not None:
+        result["time"] = format_seconds(total_seconds)
 
+    streak_days = responses.get("streak", {}).get("streak_days")
+    if streak_days is not None:
+        days = int(streak_days)
+        result["streak"] = f"{days} day{'s' if days != 1 else ''}"
+
+    projects = responses.get("projects", {}).get("projects", [])
+    if isinstance(projects, list):
+        ranked = sorted(
+            (project for project in projects if isinstance(project, dict)),
+            key=lambda project: float(project.get("total_seconds", 0)),
+            reverse=True,
+        )[:3]
+        if ranked:
+            result["projects"] = " · ".join(
+                f"{project.get('name', 'Unknown')} {format_seconds(project.get('total_seconds', 0))}"
+                for project in ranked
+            )
+
+    return result
 
 def current_age() -> int:
     today = dt.date.today()
@@ -366,15 +328,15 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         parts.extend([
             svg_text(30, 646, "PS C:\\Users\\Jeremy>", "prompt"),
             svg_text(205, 646, "Get-HackatimeSummary -Range AllTime | Format-Table", "command"),
-            svg_text(30, 674, "Total", "table-head"),
-            svg_text(210, 674, "Top Languages", "table-head"),
-            svg_text(610, 674, "Top Projects", "table-head"),
+                        svg_text(30, 674, "Total Coding", "table-head"),
+            svg_text(210, 674, "Current Streak", "table-head"),
+            svg_text(390, 674, "Top Projects", "table-head"),
             svg_text(30, 690, "----------------", "label"),
-            svg_text(210, 690, "------------------------------------------", "label"),
-            svg_text(610, 690, "--------------------------------------", "label"),
+            svg_text(210, 690, "----------------", "label"),
+            svg_text(390, 690, "----------------------------------------------------------", "label"),
             svg_text(30, 712, hackatime.get("time", "—"), "table-value"),
-            svg_text(210, 712, hackatime.get("languages", "")[:48], "chrome-muted"),
-            svg_text(610, 712, hackatime.get("projects", "")[:44], "chrome-muted"),
+            svg_text(210, 712, hackatime.get("streak", "—"), "table-value"),
+            svg_text(390, 712, hackatime.get("projects", "")[:62], "chrome-muted"),
         ])
         cursor_y = 0
     else:
@@ -391,11 +353,7 @@ def main() -> None:
     ASSETS.mkdir(exist_ok=True)
     github_token = os.getenv("PROFILE_GH_TOKEN") or os.getenv("GITHUB_TOKEN")
     github = github_metrics(github_token)
-    hackatime = hackatime_metrics(os.getenv("HACKATIME_API_KEY"))
-    (ASSETS / "hackatime-debug.json").write_text(
-        json.dumps(HACKATIME_DIAGNOSTICS, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    hackatime = hackatime_metrics(os.getenv("HACKATIME_ACCESS_TOKEN"))
 
     for theme_name, theme in THEMES.items():
         (ASSETS / f"profile-{theme_name}.svg").write_text(
