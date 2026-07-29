@@ -1,5 +1,5 @@
 """Generate Jeremy's GitHub profile system card and project tiles."""
-# The generated SVG files are committed by the profile refresh workflow.
+# Generated SVG files are committed automatically by the refresh workflow.
 from __future__ import annotations
 
 import datetime as dt
