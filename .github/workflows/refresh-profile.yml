@@ -23,10 +23,9 @@ jobs:
           python-version: "3.12"
       - name: Render terminal cards
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          PROFILE_GH_TOKEN: \${{ secrets.PROFILE_GH_TOKEN }}
-          PROFILE_BIRTH_DATE: \${{ secrets.PROFILE_BIRTH_DATE }}
-          HACKATIME_API_KEY: \${{ secrets.HACKATIME_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROFILE_GH_TOKEN: ${{ secrets.PROFILE_GH_TOKEN }}
+          HACKATIME_API_KEY: ${{ secrets.HACKATIME_API_KEY }}
         run: python scripts/render_profile.py
       - name: Commit refreshed assets
         run: |
