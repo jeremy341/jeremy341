@@ -246,7 +246,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
             pass
 
     parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="750" viewBox="0 0 1000 750" role="img" aria-label="Jeremy Darko PowerShell developer profile">',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="780" viewBox="0 0 1000 780" role="img" aria-label="Jeremy Darko PowerShell developer profile">',
         "<style>",
         f".chrome{{fill:{theme['text']};font:12px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
         f".chrome-muted{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
@@ -257,8 +257,8 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         f".table-head{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.5px}}",
         f".table-value{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
         "</style>",
-        f'<rect width="1000" height="750" rx="9" fill="{theme["bg"]}"/>',
-        f'<rect x="1" y="1" width="998" height="748" rx="8" fill="none" stroke="{theme["line"]}"/>',
+        f'<rect width="1000" height="780" rx="9" fill="{theme["bg"]}"/>',
+        f'<rect x="1" y="1" width="998" height="778" rx="8" fill="none" stroke="{theme["line"]}"/>',
 
         # Windows Terminal title bar
         f'<path d="M9 0h982a9 9 0 0 1 9 9v43H0V9a9 9 0 0 1 9-9z" fill="{theme["panel"]}"/>',
@@ -338,8 +338,9 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
             svg_text(30, 712, hackatime.get("time", "—"), "table-value"),
             svg_text(210, 712, hackatime.get("streak", "—"), "table-value"),
             svg_text(390, 712, hackatime.get("projects", "")[:62], "table-value"),
+            svg_text(30, 754, "PS C:\\Users\\Jeremy>", "prompt"),
+            f'<rect x="205" y="740" width="9" height="18" fill="{theme["text"]}"><animate attributeName="opacity" values="1;1;0;0;1" dur="1.2s" repeatCount="indefinite"/></rect>',
         ])
-        cursor_y = 0
     else:
         parts.extend([
             svg_text(30, cursor_y, "PS C:\\Users\\Jeremy>", "prompt"),
