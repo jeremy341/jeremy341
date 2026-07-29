@@ -218,6 +218,7 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
 
     return result
 
+
 def current_age() -> int:
     today = dt.date.today()
     return today.year - BIRTH_DATE.year - (
@@ -245,7 +246,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
             pass
 
     parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="720" viewBox="0 0 1000 720" role="img" aria-label="Jeremy Darko PowerShell developer profile">',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="750" viewBox="0 0 1000 750" role="img" aria-label="Jeremy Darko PowerShell developer profile">',
         "<style>",
         f".chrome{{fill:{theme['text']};font:12px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
         f".chrome-muted{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
@@ -256,8 +257,8 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         f".table-head{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.5px}}",
         f".table-value{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
         "</style>",
-        f'<rect width="1000" height="720" rx="9" fill="{theme["bg"]}"/>',
-        f'<rect x="1" y="1" width="998" height="718" rx="8" fill="none" stroke="{theme["line"]}"/>',
+        f'<rect width="1000" height="750" rx="9" fill="{theme["bg"]}"/>',
+        f'<rect x="1" y="1" width="998" height="748" rx="8" fill="none" stroke="{theme["line"]}"/>',
 
         # Windows Terminal title bar
         f'<path d="M9 0h982a9 9 0 0 1 9 9v43H0V9a9 9 0 0 1 9-9z" fill="{theme["panel"]}"/>',
@@ -328,7 +329,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         parts.extend([
             svg_text(30, 646, "PS C:\\Users\\Jeremy>", "prompt"),
             svg_text(205, 646, "Get-HackatimeSummary -Range AllTime | Format-Table", "command"),
-                        svg_text(30, 674, "Total Coding", "table-head"),
+            svg_text(30, 674, "Total Coding", "table-head"),
             svg_text(210, 674, "Current Streak", "table-head"),
             svg_text(390, 674, "Top Projects", "table-head"),
             svg_text(30, 690, "----------------", "label"),
