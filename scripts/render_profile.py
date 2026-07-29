@@ -337,7 +337,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
             svg_text(390, 690, "----------------------------------------------------------", "label"),
             svg_text(30, 712, hackatime.get("time", "—"), "table-value"),
             svg_text(210, 712, hackatime.get("streak", "—"), "table-value"),
-            svg_text(390, 712, hackatime.get("projects", "")[:62], "chrome-muted"),
+            svg_text(390, 712, hackatime.get("projects", "")[:62], "table-value"),
         ])
         cursor_y = 0
     else:
