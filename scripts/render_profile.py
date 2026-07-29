@@ -1,157 +1,346 @@
-"""Render the profile's terminal card. Run locally or through GitHub Actions."""
+"""Generate Jeremy's GitHub profile system card and project tiles."""
 from __future__ import annotations
 
 import datetime as dt
 import html
 import json
 import os
+import urllib.parse
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 USERNAME = "jeremy341"
+BIRTH_DATE = dt.date(2009, 8, 12)
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
-API = "https://api.github.com"
+GITHUB_API = "https://api.github.com"
+GRAPHQL_API = "https://api.github.com/graphql"
 HACKATIME_API = "https://hackatime.hackclub.com/api/v1/stats"
 
+PROJECTS = [
+    ("01", "MIRA", "Edge-AI recycling automation", "MIRA-AI"),
+    ("02", "NIMBL", "Token-efficient AI coding companion", "NIMBL"),
+    ("03", "ESP32-S3 ALARM CLOCK", "Custom PCB, firmware and enclosure", "esp32-alarm-clock"),
+    ("04", "POORUP", "Real-time multiplayer board game", "Poorup"),
+]
 
-def request_json(url: str, token: str | None = None) -> dict | list:
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "jeremy341-profile"}
+THEMES = {
+    "dark": {
+        "bg": "#050505", "panel": "#0b0b0b", "text": "#ffffff",
+        "muted": "#a3a3a3", "line": "#303030", "accent": "#ffffff",
+    },
+    "light": {
+        "bg": "#ffffff", "panel": "#fafafa", "text": "#080808",
+        "muted": "#666666", "line": "#d4d4d4", "accent": "#080808",
+    },
+}
+
+
+def request_json(
+    url: str,
+    token: str | None = None,
+    *,
+    data: dict[str, Any] | None = None,
+    hackatime: bool = False,
+) -> dict[str, Any] | list[dict[str, Any]]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "jeremy341-profile",
+    }
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=20) as response:
+    if hackatime:
+        headers["Accept"] = "application/json"
+    encoded = None
+    if data is not None:
+        headers["Content-Type"] = "application/json"
+        encoded = json.dumps(data).encode("utf-8")
+    request = urllib.request.Request(url, headers=headers, data=encoded)
+    with urllib.request.urlopen(request, timeout=30) as response:
         return json.load(response)
 
 
-def github_stats(token: str | None) -> tuple[int, int, int | None]:
-    user = request_json(f"{API}/users/{USERNAME}", token)
-    repos = request_json(f"{API}/users/{USERNAME}/repos?type=owner&per_page=100", token)
-    stars = sum(repo.get("stargazers_count", 0) for repo in repos)
-    contributions = None
-    if token:
-        query = """
-        query($login: String!) {
-          user(login: $login) {
-            contributionsCollection {
-              contributionCalendar { totalContributions }
+def graphql(query: str, variables: dict[str, Any], token: str | None) -> dict[str, Any] | None:
+    if not token:
+        return None
+    try:
+        response = request_json(
+            GRAPHQL_API,
+            token,
+            data={"query": query, "variables": variables},
+        )
+        if isinstance(response, dict) and not response.get("errors"):
+            return response.get("data")
+    except Exception:
+        return None
+    return None
+
+
+def public_repositories(token: str | None) -> list[dict[str, Any]]:
+    repositories: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        url = (
+            f"{GITHUB_API}/users/{USERNAME}/repos"
+            f"?type=owner&sort=updated&per_page=100&page={page}"
+        )
+        batch = request_json(url, token)
+        if not isinstance(batch, list):
+            break
+        repositories.extend(batch)
+        if len(batch) < 100:
+            break
+        page += 1
+    return repositories
+
+
+def code_history(repositories: list[dict[str, Any]], token: str | None) -> tuple[int | None, int | None, int | None]:
+    if not token:
+        return None, None, None
+
+    user_query = "query($login:String!){user(login:$login){id}}"
+    user_data = graphql(user_query, {"login": USERNAME}, token)
+    if not user_data or not user_data.get("user"):
+        return None, None, None
+    author_id = user_data["user"]["id"]
+
+    history_query = """
+    query($owner:String!,$name:String!,$author:ID!,$cursor:String){
+      repository(owner:$owner,name:$name){
+        defaultBranchRef{
+          target{
+            ... on Commit{
+              history(first:100,after:$cursor,author:{id:$author}){
+                nodes{additions deletions}
+                pageInfo{hasNextPage endCursor}
+              }
             }
           }
         }
-        """
-        payload = json.dumps({"query": query, "variables": {"login": USERNAME}}).encode()
-        req = urllib.request.Request(
-            "https://api.github.com/graphql",
-            data=payload,
-            headers={
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-                "User-Agent": "jeremy341-profile",
-            },
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=20) as response:
-                data = json.load(response)
-            contributions = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["totalContributions"]
-        except Exception:
-            pass
-    return user.get("public_repos", len(repos)), stars, contributions
+      }
+    }
+    """
+
+    commits = additions = deletions = 0
+    for repository in repositories:
+        owner = repository["owner"]["login"]
+        name = repository["name"]
+        cursor = None
+        while True:
+            data = graphql(
+                history_query,
+                {"owner": owner, "name": name, "author": author_id, "cursor": cursor},
+                token,
+            )
+            try:
+                history = data["repository"]["defaultBranchRef"]["target"]["history"]
+            except (TypeError, KeyError):
+                break
+            for node in history["nodes"]:
+                commits += 1
+                additions += int(node.get("additions", 0))
+                deletions += int(node.get("deletions", 0))
+            page = history["pageInfo"]
+            if not page["hasNextPage"]:
+                break
+            cursor = page["endCursor"]
+    return commits, additions, deletions
 
 
-def hackatime_stats(token: str | None) -> str:
+def github_metrics(token: str | None) -> dict[str, str]:
+    repositories = public_repositories(token)
+    stars = sum(int(repo.get("stargazers_count", 0)) for repo in repositories)
+    commits, additions, deletions = code_history(repositories, token)
+
+    def number(value: int | None) -> str:
+        return f"{value:,}" if value is not None else "sync pending"
+
+    if additions is None or deletions is None:
+        code = "sync pending"
+    else:
+        net = additions - deletions
+        code = f"+{additions:,} / -{deletions:,} / {net:,} net"
+
+    return {
+        "repositories": str(len(repositories)),
+        "stars": f"{stars:,}",
+        "commits": number(commits),
+        "code": code,
+    }
+
+
+def format_seconds(value: float | int) -> str:
+    minutes = int(value) // 60
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:,}h {minutes:02d}m"
+
+
+def hackatime_metrics(token: str | None) -> dict[str, str]:
     if not token:
-        return ""
+        return {}
     try:
-        data = request_json(f"{HACKATIME_API}?range=last_7_days", token)
-        languages = data.get("data", {}).get("languages", [])
-        top = languages[:3]
-        if not top:
-            return ""
-        return "  |  ".join(f"{item['name']} {item.get('text', '')}" for item in top)
+        response = request_json(
+            f"{HACKATIME_API}?range=all_time",
+            token,
+            hackatime=True,
+        )
+        if not isinstance(response, dict):
+            return {}
+        data = response.get("data", response)
+        total = (
+            data.get("human_readable_total")
+            or data.get("human_readable_total_including_other_language")
+            or (
+                format_seconds(data["total_seconds"])
+                if data.get("total_seconds") is not None
+                else None
+            )
+        )
+        languages = data.get("languages", [])[:3]
+        projects = data.get("projects", [])[:3]
+        result: dict[str, str] = {}
+        if total:
+            result["time"] = str(total)
+        if languages:
+            result["languages"] = " · ".join(
+                f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
+                for item in languages
+            )
+        if projects:
+            result["projects"] = " · ".join(
+                f"{item.get('name', 'Unknown')} {item.get('text', '')}".strip()
+                for item in projects
+            )
+        return result
     except Exception:
-        return ""
+        return {}
 
 
-def age() -> str:
-    value = os.getenv("PROFILE_BIRTH_DATE")
-    if not value:
-        return "private"
-    birthday = dt.date.fromisoformat(value)
+def current_age() -> int:
     today = dt.date.today()
-    years = today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
-    return f"{years} years"
+    return today.year - BIRTH_DATE.year - (
+        (today.month, today.day) < (BIRTH_DATE.month, BIRTH_DATE.day)
+    )
 
 
-def escape(value: object) -> str:
+def esc(value: object) -> str:
     return html.escape(str(value), quote=True)
 
 
-def make_svg(theme: dict[str, str], stats: tuple[int, int, int | None], hackatime: str) -> str:
-    repos, stars, contributions = stats
-    contribution_text = f"{contributions:,}" if contributions is not None else "syncing"
-    rows = [
-        ("OS", "NRW, Germany"),
-        ("Uptime", age()),
-        ("Role", "Student / embedded systems engineer in training"),
-        ("Focus", "embedded systems, IoT, computer vision"),
-        ("Now building", "MIRA — recycling-sorting edge AI"),
-        ("Languages", "C++, Python, TypeScript, JavaScript"),
-        ("Hardware", "ESP32, Arduino, KiCad, Fusion 360"),
-        ("Tools", "PlatformIO, Git, FastAPI, Socket.IO"),
-        ("GitHub", f"{repos} public repos  |  {stars} stars  |  {contribution_text} contributions"),
-        ("Portfolio", "A+  |  MIRA  ·  NIMBL  ·  ESP32-S3 Alarm Clock"),
+def svg_text(x: int, y: int, value: object, css_class: str, anchor: str | None = None) -> str:
+    anchor_attr = f' text-anchor="{anchor}"' if anchor else ""
+    return f'<text x="{x}" y="{y}" class="{css_class}"{anchor_attr}>{esc(value)}</text>'
+
+
+def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime: dict[str, str]) -> str:
+    left_rows = [
+        ("AGE", f"{current_age()} years"),
+        ("LOCATION", "NRW, Germany"),
+        ("ROLE", "Student · embedded systems"),
+        ("FOCUS", "Hardware · firmware · applied AI"),
+        ("BUILDING", "MIRA"),
     ]
-    if hackatime:
-        rows.append(("Hackatime", hackatime))
-    rows += [
-        ("Status", "building in public"),
+    right_rows = [
+        ("PUBLIC REPOSITORIES", github["repositories"]),
+        ("TOTAL STARS", github["stars"]),
+        ("TOTAL COMMITS", github["commits"]),
+        ("CODE CHANGES", github["code"]),
     ]
-    text = []
-    y = 108
-    for index, (key, value) in enumerate(rows):
-        if index in (5, 8):
-            y += 14
-            text.append(f'<line x1="42" y1="{y}" x2="1058" y2="{y}" stroke="{theme["line"]}" stroke-width="1"/>')
-            y += 28
-        dots = "." * max(2, 18 - len(key))
-        text.append(
-            f'<text x="42" y="{y}" class="key">{escape(key)}</text>'
-            f'<text x="190" y="{y}" class="dots">{dots}</text>'
-            f'<text x="340" y="{y}" class="value">{escape(value)}</text>'
-        )
-        y += 35
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="570" viewBox="0 0 1100 570" role="img" aria-label="Jeremy Darko portfolio terminal">
-<style>
-  .title {{ fill: {theme["title"]}; font: 700 24px 'JetBrains Mono', Consolas, monospace; }}
-  .sub {{ fill: {theme["muted"]}; font: 15px 'JetBrains Mono', Consolas, monospace; }}
-  .key {{ fill: {theme["key"]}; font: 600 16px 'JetBrains Mono', Consolas, monospace; }}
-  .value {{ fill: {theme["value"]}; font: 16px 'JetBrains Mono', Consolas, monospace; }}
-  .dots {{ fill: {theme["muted"]}; font: 16px 'JetBrains Mono', Consolas, monospace; }}
-</style>
-<rect width="1100" height="570" rx="18" fill="{theme["bg"]}"/>
-<rect x="1" y="1" width="1098" height="568" rx="17" fill="none" stroke="{theme["border"]}"/>
-<circle cx="42" cy="42" r="7" fill="{theme["red"]}"/><circle cx="66" cy="42" r="7" fill="{theme["yellow"]}"/><circle cx="90" cy="42" r="7" fill="{theme["green"]}"/>
-<text x="550" y="48" text-anchor="middle" class="sub">jeremy@build-lab: ~</text>
-<line x1="42" y1="70" x2="1058" y2="70" stroke="{theme["line"]}" stroke-width="1"/>
-<text x="42" y="108" class="title">jeremy@portfolio</text>
-<text x="42" y="134" class="sub">system status: online  ·  refreshed daily</text>
-{''.join(text)}
-<text x="42" y="540" class="sub">github.com/jeremy341</text>
-</svg>"""
+    if hackatime.get("time"):
+        right_rows.append(("HACKATIME TOTAL", hackatime["time"]))
+
+    parts = [
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="490" viewBox="0 0 1000 490" role="img" aria-label="Jeremy Darko system profile">',
+        "<style>",
+        f".title{{fill:{theme['text']};font:700 28px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".subtitle{{fill:{theme['muted']};font:14px 'JetBrains Mono',Consolas,monospace}}",
+        f".section{{fill:{theme['text']};font:700 13px 'JetBrains Mono',Consolas,monospace;letter-spacing:2px}}",
+        f".label{{fill:{theme['muted']};font:12px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".value{{fill:{theme['text']};font:15px 'JetBrains Mono',Consolas,monospace}}",
+        f".status{{fill:{theme['bg']};font:700 11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        "</style>",
+        f'<rect width="1000" height="490" rx="16" fill="{theme["bg"]}"/>',
+        f'<rect x="1" y="1" width="998" height="488" rx="15" fill="none" stroke="{theme["line"]}"/>',
+        svg_text(38, 52, "JEREMY DARKO", "title"),
+        svg_text(38, 77, "SYSTEM PROFILE / EMBEDDED · SOFTWARE · AI", "subtitle"),
+        f'<rect x="872" y="31" width="90" height="28" rx="14" fill="{theme["accent"]}"/>',
+        svg_text(917, 50, "ONLINE", "status", "middle"),
+        f'<line x1="38" y1="102" x2="962" y2="102" stroke="{theme["line"]}"/>',
+        svg_text(38, 135, "IDENTITY", "section"),
+        svg_text(520, 135, "LIVE METRICS", "section"),
+        f'<line x1="482" y1="122" x2="482" y2="365" stroke="{theme["line"]}"/>',
+    ]
+
+    y = 172
+    for label, value in left_rows:
+        parts.extend([
+            svg_text(38, y, label, "label"),
+            svg_text(165, y, value, "value"),
+        ])
+        y += 43
+
+    y = 172
+    for label, value in right_rows:
+        parts.extend([
+            svg_text(520, y, label, "label"),
+            svg_text(710, y, value, "value"),
+        ])
+        y += 43
+
+    parts.extend([
+        f'<line x1="38" y1="382" x2="962" y2="382" stroke="{theme["line"]}"/>',
+        svg_text(38, 413, "STACK", "section"),
+        svg_text(38, 443, "C++ · C · Python · TypeScript · JavaScript", "value"),
+        svg_text(520, 413, "HARDWARE + TOOLS", "section"),
+        svg_text(520, 443, "ESP32 · KiCad · PlatformIO · Fusion 360", "value"),
+        svg_text(38, 474, "SELECTED PROJECTS BELOW", "subtitle"),
+    ])
+
+    if hackatime.get("languages") or hackatime.get("projects"):
+        footer = hackatime.get("languages") or hackatime.get("projects", "")
+        parts.append(svg_text(962, 474, footer[:58], "subtitle", "end"))
+
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def render_project_card(theme: dict[str, str], index: str, title: str, description: str) -> str:
+    return "".join([
+        '<svg xmlns="http://www.w3.org/2000/svg" width="485" height="112" viewBox="0 0 485 112" role="img">',
+        "<style>",
+        f".index{{fill:{theme['muted']};font:12px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".title{{fill:{theme['text']};font:700 17px 'JetBrains Mono',Consolas,monospace}}",
+        f".desc{{fill:{theme['muted']};font:12px 'JetBrains Mono',Consolas,monospace}}",
+        f".open{{fill:{theme['text']};font:700 11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        "</style>",
+        f'<rect width="485" height="112" rx="12" fill="{theme["panel"]}"/>',
+        f'<rect x="1" y="1" width="483" height="110" rx="11" fill="none" stroke="{theme["line"]}"/>',
+        svg_text(24, 28, index, "index"),
+        svg_text(24, 55, title, "title"),
+        svg_text(24, 78, description, "desc"),
+        svg_text(461, 94, "OPEN REPOSITORY →", "open", "end"),
+        "</svg>",
+    ])
 
 
 def main() -> None:
     ASSETS.mkdir(exist_ok=True)
-    token = os.getenv("PROFILE_GH_TOKEN") or os.getenv("GITHUB_TOKEN")
-    stats = github_stats(token)
-    hackatime = hackatime_stats(os.getenv("HACKATIME_API_KEY"))
-    themes = {
-        "profile-dark.svg": {"bg": "#0d1117", "border": "#30363d", "line": "#30363d", "title": "#e6edf3", "muted": "#7d8590", "key": "#58a6ff", "value": "#c9d1d9", "red": "#ff7b72", "yellow": "#d29922", "green": "#3fb950"},
-        "profile-light.svg": {"bg": "#f6f8fa", "border": "#d0d7de", "line": "#d8dee4", "title": "#1f2328", "muted": "#57606a", "key": "#0969da", "value": "#24292f", "red": "#cf222e", "yellow": "#9a6700", "green": "#1a7f37"},
-    }
-    for filename, theme in themes.items():
-        (ASSETS / filename).write_text(make_svg(theme, stats, hackatime), encoding="utf-8")
+    github_token = os.getenv("PROFILE_GH_TOKEN") or os.getenv("GITHUB_TOKEN")
+    github = github_metrics(github_token)
+    hackatime = hackatime_metrics(os.getenv("HACKATIME_API_KEY"))
+
+    for theme_name, theme in THEMES.items():
+        (ASSETS / f"profile-{theme_name}.svg").write_text(
+            render_system_card(theme, github, hackatime),
+            encoding="utf-8",
+        )
+        for _, title, description, repository in PROJECTS:
+            slug = repository.lower()
+            (ASSETS / f"project-{slug}-{theme_name}.svg").write_text(
+                render_project_card(theme, PROJECTS[[p[3] for p in PROJECTS].index(repository)][0], title, description),
+                encoding="utf-8",
+            )
 
 
 if __name__ == "__main__":
