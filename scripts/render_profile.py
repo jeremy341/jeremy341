@@ -9,6 +9,7 @@ import os
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from typing import Any
 
 USERNAME = "jeremy341"
@@ -228,7 +229,7 @@ def svg_text(x: int, y: int, value: object, css_class: str, anchor: str | None =
 
 
 def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime: dict[str, str]) -> str:
-    synced = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    synced = dt.datetime.now(ZoneInfo("Europe/Berlin")).strftime("%Y-%m-%d %H:%M %Z")
     added, removed, net = "—", "—", "—"
     if github["code"] != "sync pending":
         try:
