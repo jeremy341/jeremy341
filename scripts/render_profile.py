@@ -21,12 +21,12 @@ HACKATIME_API = "https://hackatime.hackclub.com/api/v1/stats"
 
 THEMES = {
     "dark": {
-        "bg": "#050505", "panel": "#0b0b0b", "text": "#ffffff",
-        "muted": "#a3a3a3", "line": "#303030", "accent": "#ffffff",
+        "bg": "#0c0c0c", "panel": "#181818", "text": "#f5f5f5",
+        "muted": "#9b9b9b", "line": "#333333", "accent": "#f5f5f5",
     },
     "light": {
-        "bg": "#ffffff", "panel": "#fafafa", "text": "#080808",
-        "muted": "#666666", "line": "#d4d4d4", "accent": "#080808",
+        "bg": "#0c0c0c", "panel": "#181818", "text": "#f5f5f5",
+        "muted": "#9b9b9b", "line": "#333333", "accent": "#f5f5f5",
     },
 }
 
@@ -228,112 +228,113 @@ def svg_text(x: int, y: int, value: object, css_class: str, anchor: str | None =
 
 
 def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime: dict[str, str]) -> str:
-    synced = dt.datetime.now(dt.timezone.utc)
-    revision = synced.strftime("%Y.%m.%d")
-    last_sync = synced.strftime("%Y-%m-%d / %H:%M UTC")
+    synced = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    added, removed, net = "—", "—", "—"
+    if github["code"] != "sync pending":
+        try:
+            chunks = github["code"].replace(" net", "").split(" / ")
+            added, removed, net = chunks
+        except ValueError:
+            pass
 
     parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640" role="img" aria-label="Jeremy Darko engineering system profile">',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700" role="img" aria-label="Jeremy Darko PowerShell developer profile">',
         "<style>",
-        f".hero{{fill:{theme['text']};font:700 26px 'JetBrains Mono',Consolas,monospace;letter-spacing:1.4px}}",
-        f".meta{{fill:{theme['muted']};font:11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        f".section{{fill:{theme['text']};font:700 12px 'JetBrains Mono',Consolas,monospace;letter-spacing:2px}}",
-        f".label{{fill:{theme['muted']};font:11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        f".value{{fill:{theme['text']};font:14px 'JetBrains Mono',Consolas,monospace}}",
-        f".module{{fill:{theme['text']};font:700 20px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        f".status{{fill:{theme['bg']};font:700 10px 'JetBrains Mono',Consolas,monospace;letter-spacing:1.5px}}",
+        f".chrome{{fill:{theme['text']};font:12px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".chrome-muted{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".prompt{{fill:{theme['text']};font:700 14px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".command{{fill:{theme['text']};font:14px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".label{{fill:{theme['muted']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".value{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".table-head{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.5px}}",
+        f".table-value{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
         "</style>",
-        f'<rect width="1000" height="640" fill="{theme["bg"]}"/>',
-        f'<rect x="1" y="1" width="998" height="638" rx="3" fill="none" stroke="{theme["line"]}"/>',
-        f'<rect x="12" y="12" width="976" height="616" rx="2" fill="none" stroke="{theme["line"]}"/>',
-        # Technical reference marks
-        f'<path d="M12 34h14 M12 606h14 M974 34h14 M974 606h14 M36 12v14 M964 12v14 M36 614v14 M964 614v14" stroke="{theme["text"]}" stroke-width="1"/>',
-        f'<circle cx="500" cy="12" r="3" fill="{theme["bg"]}" stroke="{theme["text"]}"/>',
-        f'<circle cx="500" cy="628" r="3" fill="{theme["bg"]}" stroke="{theme["text"]}"/>',
+        f'<rect width="1000" height="700" rx="9" fill="{theme["bg"]}"/>',
+        f'<rect x="1" y="1" width="998" height="698" rx="8" fill="none" stroke="{theme["line"]}"/>',
 
-        svg_text(36, 48, "JDK-001 / SYSTEM PROFILE", "hero"),
-        svg_text(36, 72, "EMBEDDED SYSTEMS · SOFTWARE · APPLIED AI", "meta"),
-        svg_text(672, 43, f"REV / {revision}", "meta"),
-        svg_text(672, 65, f"SYNC / {last_sync}", "meta"),
-        f'<rect x="895" y="31" width="67" height="28" fill="{theme["accent"]}"/>',
-        svg_text(928, 50, "SYS.OK", "status", "middle"),
-        f'<line x1="36" y1="96" x2="964" y2="96" stroke="{theme["line"]}"/>',
-        f'<circle cx="36" cy="96" r="3" fill="{theme["text"]}"/>',
-        f'<circle cx="964" cy="96" r="3" fill="{theme["text"]}"/>',
+        # Windows Terminal title bar
+        f'<path d="M9 0h982a9 9 0 0 1 9 9v43H0V9a9 9 0 0 1 9-9z" fill="{theme["panel"]}"/>',
+        f'<rect x="12" y="9" width="272" height="43" rx="6" fill="{theme["bg"]}"/>',
+        f'<rect x="24" y="20" width="22" height="22" rx="3" fill="{theme["text"]}"/>',
+        f'<text x="35" y="36" text-anchor="middle" style="fill:{theme["bg"]};font:700 11px Cascadia Code,monospace">&gt;_</text>',
+        svg_text(58, 36, "PowerShell 7.5.2", "chrome"),
+        svg_text(301, 35, "+", "chrome"),
+        svg_text(332, 35, "⌄", "chrome-muted"),
+        svg_text(650, 34, f"jeremy341 / profile.ps1 / {synced}", "chrome-muted"),
+        f'<rect x="844" y="0" width="52" height="52" fill="transparent"/>',
+        f'<rect x="896" y="0" width="52" height="52" fill="transparent"/>',
+        f'<rect x="948" y="0" width="52" height="52" fill="transparent"/>',
+        svg_text(870, 32, "—", "chrome", "middle"),
+        svg_text(922, 32, "□", "chrome", "middle"),
+        svg_text(974, 32, "×", "chrome", "middle"),
+        f'<line x1="0" y1="52" x2="1000" y2="52" stroke="{theme["line"]}"/>',
 
-        svg_text(36, 127, "IDENTITY / 01", "section"),
-        svg_text(524, 127, "DEVELOPMENT METRICS / 02", "section"),
-        f'<line x1="500" y1="112" x2="500" y2="304" stroke="{theme["line"]}"/>',
+        # Command 1
+        svg_text(30, 86, "PS C:\\Users\\Jeremy>", "prompt"),
+        svg_text(205, 86, "Get-DeveloperProfile", "command"),
+        svg_text(30, 116, "Name", "label"), svg_text(126, 116, ":", "label"), svg_text(150, 116, "Jeremy Darko", "value"),
+        svg_text(30, 142, "Age", "label"), svg_text(126, 142, ":", "label"), svg_text(150, 142, f"{current_age()}", "value"),
+        svg_text(30, 168, "Location", "label"), svg_text(126, 168, ":", "label"), svg_text(150, 168, "NRW, Germany", "value"),
+        svg_text(30, 194, "Role", "label"), svg_text(126, 194, ":", "label"), svg_text(150, 194, "Student / Embedded Systems", "value"),
+        svg_text(30, 220, "Focus", "label"), svg_text(126, 220, ":", "label"), svg_text(150, 220, "Hardware, Firmware, Applied AI", "value"),
+
+        # Command 2
+        svg_text(30, 260, "PS C:\\Users\\Jeremy>", "prompt"),
+        svg_text(205, 260, "Get-GitHubMetrics | Format-Table", "command"),
+        svg_text(30, 291, "Repositories", "table-head"),
+        svg_text(170, 291, "Stars", "table-head"),
+        svg_text(260, 291, "Commits", "table-head"),
+        svg_text(370, 291, "Added", "table-head"),
+        svg_text(520, 291, "Removed", "table-head"),
+        svg_text(675, 291, "Net", "table-head"),
+        svg_text(30, 309, "------------", "label"),
+        svg_text(170, 309, "-----", "label"),
+        svg_text(260, 309, "-------", "label"),
+        svg_text(370, 309, "-------------", "label"),
+        svg_text(520, 309, "-------------", "label"),
+        svg_text(675, 309, "-------------", "label"),
+        svg_text(30, 333, github["repositories"], "table-value"),
+        svg_text(170, 333, github["stars"], "table-value"),
+        svg_text(260, 333, github["commits"], "table-value"),
+        svg_text(370, 333, added, "table-value"),
+        svg_text(520, 333, removed, "table-value"),
+        svg_text(675, 333, net, "table-value"),
+
+        # Command 3
+        svg_text(30, 376, "PS C:\\Users\\Jeremy>", "prompt"),
+        svg_text(205, 376, "Get-CurrentProject", "command"),
+        svg_text(30, 406, "Name", "label"), svg_text(126, 406, ":", "label"), svg_text(150, 406, "MIRA", "value"),
+        svg_text(30, 432, "Type", "label"), svg_text(126, 432, ":", "label"), svg_text(150, 432, "Edge-AI Recycling Automation", "value"),
+        svg_text(30, 458, "State", "label"), svg_text(126, 458, ":", "label"), svg_text(150, 458, "In Development", "value"),
+        svg_text(30, 484, "Target", "label"), svg_text(126, 484, ":", "label"), svg_text(150, 484, "Resource-Constrained Edge Hardware", "value"),
+
+        # Command 4
+        svg_text(30, 524, "PS C:\\Users\\Jeremy>", "prompt"),
+        svg_text(205, 524, "Get-Toolchain", "command"),
+        svg_text(30, 554, "Languages", "label"), svg_text(126, 554, ":", "label"), svg_text(150, 554, "C++, C, Python, TypeScript, JavaScript", "value"),
+        svg_text(30, 580, "Hardware", "label"), svg_text(126, 580, ":", "label"), svg_text(150, 580, "ESP32, Arduino, I2C, SPI, Custom PCBs", "value"),
+        svg_text(30, 606, "Tools", "label"), svg_text(126, 606, ":", "label"), svg_text(150, 606, "KiCad, PlatformIO, Fusion 360, Git", "value"),
     ]
 
-    identity = [
-        ("AGE", f"{current_age()} YRS"),
-        ("LOCATION", "NRW / DE"),
-        ("ROLE", "STUDENT · EMBEDDED SYSTEMS"),
-        ("TARGET", "HARDWARE R&D"),
-    ]
-    metrics = [
-        ("PUBLIC REPOSITORIES", github["repositories"]),
-        ("TOTAL STARS", github["stars"]),
-        ("AUTHORED COMMITS", github["commits"]),
-        ("CODE DELTA", github["code"]),
-    ]
-    y = 165
-    for label, value in identity:
-        parts.extend([svg_text(36, y, label, "label"), svg_text(158, y, value, "value")])
-        y += 42
-    y = 165
-    for label, value in metrics:
-        parts.extend([svg_text(524, y, label, "label"), svg_text(670, y, value, "value")])
-        y += 42
-
-    parts.extend([
-        f'<line x1="36" y1="320" x2="964" y2="320" stroke="{theme["line"]}"/>',
-        svg_text(36, 350, "ACTIVE MODULE / 03", "section"),
-        svg_text(36, 389, "MIRA", "module"),
-        svg_text(36, 416, "MACHINE INTELLIGENCE FOR RECYCLING AUTOMATION", "meta"),
-        svg_text(690, 370, "STATE", "label"),
-        svg_text(790, 370, "IN DEVELOPMENT", "value"),
-        svg_text(690, 400, "TARGET", "label"),
-        svg_text(790, 400, "EDGE DEPLOYMENT", "value"),
-        svg_text(690, 430, "CLASS", "label"),
-        svg_text(790, 430, "COMPUTER VISION", "value"),
-
-        f'<line x1="36" y1="454" x2="964" y2="454" stroke="{theme["line"]}"/>',
-        svg_text(36, 484, "TOOLCHAIN / 04", "section"),
-        svg_text(36, 516, "LANG", "label"),
-        svg_text(112, 516, "C++ · C · PYTHON · TYPESCRIPT · JAVASCRIPT", "value"),
-        svg_text(36, 546, "HW", "label"),
-        svg_text(112, 546, "ESP32 · ARDUINO · I²C · SPI · CUSTOM PCB", "value"),
-        svg_text(524, 516, "CAD", "label"),
-        svg_text(600, 516, "KICAD · FUSION 360", "value"),
-        svg_text(524, 546, "BUILD", "label"),
-        svg_text(600, 546, "PLATFORMIO · GIT · FASTAPI", "value"),
-
-        f'<line x1="36" y1="570" x2="964" y2="570" stroke="{theme["line"]}"/>',
-        svg_text(36, 600, "ACTIVITY / 05", "section"),
-    ])
-
+    cursor_y = 660
     if hackatime:
-        activity = "TOTAL " + hackatime.get("time", "—")
-        languages = hackatime.get("languages", "")
-        projects = hackatime.get("projects", "")
         parts.extend([
-            svg_text(192, 600, activity[:30], "value"),
-            svg_text(420, 600, languages[:42], "meta"),
-            svg_text(964, 600, projects[:42], "meta", "end"),
+            svg_text(30, 646, "PS C:\\Users\\Jeremy>", "prompt"),
+            svg_text(205, 646, "Get-HackatimeSummary -Range AllTime", "command"),
+            svg_text(30, 674, "Total", "label"),
+            svg_text(88, 674, ":", "label"),
+            svg_text(106, 674, hackatime.get("time", "—"), "value"),
+            svg_text(270, 674, hackatime.get("languages", "")[:42], "chrome-muted"),
+            svg_text(620, 674, hackatime.get("projects", "")[:42], "chrome-muted"),
         ])
+        cursor_y = 0
     else:
         parts.extend([
-            svg_text(192, 600, "GITHUB API / DAILY REFRESH", "value"),
-            svg_text(964, 600, "HACKATIME / OPTIONAL", "meta", "end"),
+            svg_text(30, cursor_y, "PS C:\\Users\\Jeremy>", "prompt"),
+            f'<rect x="205" y="{cursor_y - 14}" width="9" height="18" fill="{theme["text"]}"><animate attributeName="opacity" values="1;1;0;0;1" dur="1.2s" repeatCount="indefinite"/></rect>',
         ])
 
-    parts.extend([
-        svg_text(36, 621, "REF JDK-PROFILE-001", "meta"),
-        svg_text(964, 621, "DATA SCOPE / PUBLIC REPOSITORIES", "meta", "end"),
-        "</svg>",
-    ])
+    parts.append("</svg>")
     return "".join(parts)
 
 
