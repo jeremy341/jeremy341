@@ -251,7 +251,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         right_rows.append(("HACKATIME TOTAL", hackatime["time"]))
 
     parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="490" viewBox="0 0 1000 490" role="img" aria-label="Jeremy Darko system profile">',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="540" viewBox="0 0 1000 540" role="img" aria-label="Jeremy Darko system profile">',
         "<style>",
         f".title{{fill:{theme['text']};font:700 28px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
         f".subtitle{{fill:{theme['muted']};font:14px 'JetBrains Mono',Consolas,monospace}}",
@@ -260,8 +260,8 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         f".value{{fill:{theme['text']};font:15px 'JetBrains Mono',Consolas,monospace}}",
         f".status{{fill:{theme['bg']};font:700 11px 'JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
         "</style>",
-        f'<rect width="1000" height="490" rx="16" fill="{theme["bg"]}"/>',
-        f'<rect x="1" y="1" width="998" height="488" rx="15" fill="none" stroke="{theme["line"]}"/>',
+        f'<rect width="1000" height="540" rx="16" fill="{theme["bg"]}"/>',
+        f'<rect x="1" y="1" width="998" height="538" rx="15" fill="none" stroke="{theme["line"]}"/>',
         svg_text(38, 52, "JEREMY DARKO", "title"),
         svg_text(38, 77, "SYSTEM PROFILE / EMBEDDED · SOFTWARE · AI", "subtitle"),
         f'<rect x="872" y="31" width="90" height="28" rx="14" fill="{theme["accent"]}"/>',
@@ -294,12 +294,20 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         svg_text(38, 443, "C++ · C · Python · TypeScript · JavaScript", "value"),
         svg_text(520, 413, "HARDWARE + TOOLS", "section"),
         svg_text(520, 443, "ESP32 · KiCad · PlatformIO · Fusion 360", "value"),
-        svg_text(38, 474, "SELECTED PROJECTS BELOW", "subtitle"),
+        f'<line x1="38" y1="466" x2="962" y2="466" stroke="{theme["line"]}"/>',
     ])
 
-    if hackatime.get("languages") or hackatime.get("projects"):
-        footer = hackatime.get("languages") or hackatime.get("projects", "")
-        parts.append(svg_text(962, 474, footer[:58], "subtitle", "end"))
+    if hackatime:
+        parts.extend([
+            svg_text(38, 495, "HACKATIME / ALL TIME", "section"),
+            svg_text(38, 522, hackatime.get("languages", "Languages unavailable")[:55], "subtitle"),
+            svg_text(520, 522, hackatime.get("projects", "Projects unavailable")[:55], "subtitle"),
+        ])
+    else:
+        parts.extend([
+            svg_text(38, 497, "SELECTED PROJECTS", "section"),
+            svg_text(38, 522, "Open a project card below to view its repository.", "subtitle"),
+        ])
 
     parts.append("</svg>")
     return "".join(parts)
@@ -335,10 +343,10 @@ def main() -> None:
             render_system_card(theme, github, hackatime),
             encoding="utf-8",
         )
-        for _, title, description, repository in PROJECTS:
+        for index, title, description, repository in PROJECTS:
             slug = repository.lower()
             (ASSETS / f"project-{slug}-{theme_name}.svg").write_text(
-                render_project_card(theme, PROJECTS[[p[3] for p in PROJECTS].index(repository)][0], title, description),
+                render_project_card(theme, index, title, description),
                 encoding="utf-8",
             )
 
