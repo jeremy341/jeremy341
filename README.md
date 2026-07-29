@@ -1,9 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg">
-  <img width="100%" alt="Jeremy Darko engineering system profile" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-light.svg">
-</picture>
+<img width="100%" alt="Jeremy Darko PowerShell developer profile" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg">
 
 <br>
 
