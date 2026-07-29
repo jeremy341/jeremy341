@@ -284,7 +284,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         y += 42
     y = 165
     for label, value in metrics:
-        parts.extend([svg_text(524, y, label, "label"), svg_text(716, y, value, "value")])
+        parts.extend([svg_text(524, y, label, "label"), svg_text(670, y, value, "value")])
         y += 42
 
     parts.extend([
