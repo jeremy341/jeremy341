@@ -180,6 +180,7 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
     end_date = today.isoformat()
     endpoints = {
         # This is the same all-time total used by the official Hackatime/WakaTime-compatible view.
+        "stats": "https://hackatime.hackclub.com/api/v1/stats",
         "all_time": "https://hackatime.hackclub.com/api/v1/users/current/all_time_since_today",
         "hours": f"{HACKATIME_API}/hours?{urllib.parse.urlencode({'start_date': start_date, 'end_date': end_date})}",
         "streak": f"{HACKATIME_API}/streak",
@@ -198,8 +199,12 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
             continue
 
     result: dict[str, str] = {}
-    # The dashboard uses the authenticated date-range total. Prefer it so the card matches the official UI.
-    total_seconds = responses.get("hours", {}).get("total_seconds")
+    # Prefer Hackatime's direct stats total, which is the dashboard-compatible value.
+    stats = responses.get("stats", {})
+    stats_data = stats.get("data", {}) if isinstance(stats.get("data"), dict) else stats
+    total_seconds = stats_data.get("total_seconds") if isinstance(stats_data, dict) else None
+    if total_seconds is None:
+        total_seconds = responses.get("hours", {}).get("total_seconds")
     if total_seconds is None:
         all_time = responses.get("all_time", {})
         grand_total = all_time.get("grand_total", {}) if isinstance(all_time, dict) else {}
