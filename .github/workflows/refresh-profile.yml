@@ -28,6 +28,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROFILE_GH_TOKEN: ${{ secrets.PROFILE_GH_TOKEN }}
           HACKATIME_ACCESS_TOKEN: ${{ secrets.HACKATIME_ACCESS_TOKEN }}
+          HACKATIME_API_KEY: ${{ secrets.HACKATIME_API_KEY }}
         run: python scripts/render_profile.py
       - name: Commit refreshed assets
         run: |
