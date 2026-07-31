@@ -198,11 +198,12 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
             continue
 
     result: dict[str, str] = {}
-    all_time = responses.get("all_time", {})
-    grand_total = all_time.get("grand_total", {}) if isinstance(all_time, dict) else {}
-    total_seconds = grand_total.get("total_seconds") or all_time.get("total_seconds")
+    # The dashboard uses the authenticated date-range total. Prefer it so the card matches the official UI.
+    total_seconds = responses.get("hours", {}).get("total_seconds")
     if total_seconds is None:
-        total_seconds = responses.get("hours", {}).get("total_seconds")
+        all_time = responses.get("all_time", {})
+        grand_total = all_time.get("grand_total", {}) if isinstance(all_time, dict) else {}
+        total_seconds = grand_total.get("total_seconds") or all_time.get("total_seconds")
     if total_seconds is not None:
         result["time"] = format_seconds(total_seconds)
 
