@@ -189,7 +189,9 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
         try:
             response = request_json(url, token, hackatime=True)
             if isinstance(response, dict):
-                responses[name] = response
+                # Some deployments wrap OAuth responses in a data object.
+                payload = response.get("data") if isinstance(response.get("data"), dict) else response
+                responses[name] = payload
         except Exception:
             continue
 
@@ -203,7 +205,8 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
         days = int(streak_days)
         result["streak"] = f"{days} day{'s' if days != 1 else ''}"
 
-    projects = responses.get("projects", {}).get("projects", [])
+    projects_payload = responses.get("projects", {})
+    projects = projects_payload.get("projects", []) if isinstance(projects_payload, dict) else projects_payload
     if isinstance(projects, list):
         ranked = sorted(
             (project for project in projects if isinstance(project, dict)),
@@ -219,11 +222,29 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
     return result
 
 
-def current_age() -> int:
+def current_age_parts() -> tuple[int, int, int]:
+    """Return precise age as completed years, months, and days."""
     today = dt.date.today()
-    return today.year - BIRTH_DATE.year - (
-        (today.month, today.day) < (BIRTH_DATE.month, BIRTH_DATE.day)
-    )
+    years = today.year - BIRTH_DATE.year
+    if (today.month, today.day) < (BIRTH_DATE.month, BIRTH_DATE.day):
+        years -= 1
+
+    anchor = BIRTH_DATE.replace(year=BIRTH_DATE.year + years)
+    months = (today.year - anchor.year) * 12 + today.month - anchor.month
+    if today.day < anchor.day:
+        months -= 1
+
+    month_index = anchor.month - 1 + months
+    anchor_month = month_index % 12 + 1
+    anchor_year = anchor.year + month_index // 12
+    anchor_after_months = anchor.replace(year=anchor_year, month=anchor_month)
+    days = (today - anchor_after_months).days
+    return years, months, days
+
+
+def format_age() -> str:
+    years, months, days = current_age_parts()
+    return f"{years} years {months} months {days} days"
 
 
 def esc(value: object) -> str:
@@ -355,7 +376,8 @@ def main() -> None:
     ASSETS.mkdir(exist_ok=True)
     github_token = os.getenv("PROFILE_GH_TOKEN") or os.getenv("GITHUB_TOKEN")
     github = github_metrics(github_token)
-    hackatime = hackatime_metrics(os.getenv("HACKATIME_ACCESS_TOKEN"))
+    hackatime_token = os.getenv("HACKATIME_ACCESS_TOKEN") or os.getenv("HACKATIME_API_KEY")
+    hackatime = hackatime_metrics(hackatime_token)
 
     for theme_name, theme in THEMES.items():
         (ASSETS / f"profile-{theme_name}.svg").write_text(
