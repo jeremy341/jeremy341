@@ -302,7 +302,7 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         svg_text(30, 86, "PS C:\\Users\\Jeremy>", "prompt"),
         svg_text(205, 86, "Get-DeveloperProfile", "command"),
         svg_text(30, 116, "Name", "label"), svg_text(126, 116, ":", "label"), svg_text(150, 116, "Jeremy Darko", "value"),
-        svg_text(30, 142, "Age", "label"), svg_text(126, 142, ":", "label"), svg_text(150, 142, f"{current_age()}", "value"),
+        svg_text(30, 142, "Age", "label"), svg_text(126, 142, ":", "label"), svg_text(150, 142, format_age(), "value"),
         svg_text(30, 168, "Location", "label"), svg_text(126, 168, ":", "label"), svg_text(150, 168, "NRW, Germany", "value"),
         svg_text(30, 194, "Role", "label"), svg_text(126, 194, ":", "label"), svg_text(150, 194, "Student / Embedded Systems", "value"),
         svg_text(30, 220, "Focus", "label"), svg_text(126, 220, ":", "label"), svg_text(150, 220, "Hardware, Firmware, Applied AI", "value"),
