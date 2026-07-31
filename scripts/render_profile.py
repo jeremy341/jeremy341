@@ -179,6 +179,8 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
     start_date = BIRTH_DATE.isoformat()
     end_date = today.isoformat()
     endpoints = {
+        # This is the same all-time total used by the official Hackatime/WakaTime-compatible view.
+        "all_time": "https://hackatime.hackclub.com/api/v1/users/current/all_time_since_today",
         "hours": f"{HACKATIME_API}/hours?{urllib.parse.urlencode({'start_date': start_date, 'end_date': end_date})}",
         "streak": f"{HACKATIME_API}/streak",
         "projects": f"{HACKATIME_API}/projects?include_archived=false",
@@ -196,7 +198,11 @@ def hackatime_metrics(token: str | None) -> dict[str, str]:
             continue
 
     result: dict[str, str] = {}
-    total_seconds = responses.get("hours", {}).get("total_seconds")
+    all_time = responses.get("all_time", {})
+    grand_total = all_time.get("grand_total", {}) if isinstance(all_time, dict) else {}
+    total_seconds = grand_total.get("total_seconds") or all_time.get("total_seconds")
+    if total_seconds is None:
+        total_seconds = responses.get("hours", {}).get("total_seconds")
     if total_seconds is not None:
         result["time"] = format_seconds(total_seconds)
 
