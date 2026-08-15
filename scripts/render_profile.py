@@ -344,10 +344,10 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
         # Command 3
         svg_text(30, 376, "PS C:\\Users\\Jeremy>", "prompt"),
         svg_text(205, 376, "Get-CurrentProject", "command"),
-        svg_text(30, 406, "Name", "label"), svg_text(126, 406, ":", "label"), svg_text(150, 406, "MIRA", "value"),
-        svg_text(30, 432, "Type", "label"), svg_text(126, 432, ":", "label"), svg_text(150, 432, "Edge-AI Recycling Automation", "value"),
+        svg_text(30, 406, "Name", "label"), svg_text(126, 406, ":", "label"), svg_text(150, 406, "NIMBL", "value"),
+        svg_text(30, 432, "Type", "label"), svg_text(126, 432, ":", "label"), svg_text(150, 432, "Token-Efficient AI Coding Companion", "value"),
         svg_text(30, 458, "State", "label"), svg_text(126, 458, ":", "label"), svg_text(150, 458, "In Development", "value"),
-        svg_text(30, 484, "Target", "label"), svg_text(126, 484, ":", "label"), svg_text(150, 484, "Resource-Constrained Edge Hardware", "value"),
+        svg_text(30, 484, "Target", "label"), svg_text(126, 484, ":", "label"), svg_text(150, 484, "Developer-Focused AI Tooling", "value"),
 
         # Command 4
         svg_text(30, 524, "PS C:\\Users\\Jeremy>", "prompt"),
