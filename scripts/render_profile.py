@@ -384,6 +384,58 @@ def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime:
     return "".join(parts)
 
 
+
+def render_mobile_card(theme: dict[str, str], github: dict[str, str], hackatime: dict[str, str]) -> str:
+    """Render a single-screen, mobile-first profile card."""
+    synced = dt.datetime.now(ZoneInfo("Europe/Berlin")).strftime("%d.%m.%Y %H:%M %Z")
+    project_line = hackatime.get("projects", "No project data")[:58]
+    return "".join([
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560" role="img" aria-labelledby="mobile-title mobile-desc">',
+        '<title id="mobile-title">Jeremy Darko mobile developer profile</title>',
+        '<desc id="mobile-desc">Compact black and white profile card with live GitHub and Hackatime metrics.</desc>',
+        "<style>",
+        f".eyebrow{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:1.4px}}",
+        f".name{{fill:{theme['text']};font:700 26px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.4px}}",
+        f".status{{fill:{theme['bg']};font:700 10px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
+        f".label{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.8px}}",
+        f".value{{fill:{theme['text']};font:700 15px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".body{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        f".small{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
+        "</style>",
+        f'<rect width="720" height="560" rx="18" fill="{theme["bg"]}"/>',
+        f'<rect x="1" y="1" width="718" height="558" rx="17" fill="none" stroke="{theme["line"]}"/>',
+        f'<rect x="24" y="22" width="672" height="64" rx="10" fill="{theme["panel"]}"/>',
+        svg_text(42, 47, "SYSTEM PROFILE / MOBILE", "eyebrow"),
+        svg_text(42, 73, "JEREMY DARKO", "name"),
+        f'<rect x="609" y="42" width="62" height="22" rx="11" fill="{theme["text"]}"/>',
+        svg_text(640, 57, "ONLINE", "status", "middle"),
+        svg_text(42, 111, "IDENTITY", "eyebrow"),
+        svg_text(42, 137, "16y 11m 19d", "value"),
+        svg_text(214, 137, "NRW, Germany", "body"),
+        svg_text(454, 137, "Embedded Systems · Edge AI", "body"),
+        f'<line x1="24" y1="157" x2="696" y2="157" stroke="{theme["line"]}"/>',
+        svg_text(42, 184, "LIVE METRICS", "eyebrow"),
+        svg_text(42, 210, "GITHUB", "label"),
+        svg_text(42, 232, f'{github["repositories"]} repos · {github["stars"]} stars', "value"),
+        svg_text(268, 210, "HACKATIME", "label"),
+        svg_text(268, 232, hackatime.get("time", "—"), "value"),
+        svg_text(496, 210, "STREAK", "label"),
+        svg_text(496, 232, hackatime.get("streak", "—"), "value"),
+        f'<rect x="24" y="254" width="672" height="112" rx="12" fill="{theme["panel"]}"/>',
+        svg_text(42, 280, "CURRENT PROJECT", "eyebrow"),
+        svg_text(42, 311, "torchVK", "value"),
+        svg_text(42, 333, "Research Phase", "body"),
+        svg_text(42, 353, "Experimental systems research", "small"),
+        svg_text(42, 397, "STACK", "eyebrow"),
+        svg_text(42, 424, "C++ · Python · ESP32 · KiCad · PlatformIO", "body"),
+        f'<line x1="24" y1="445" x2="696" y2="445" stroke="{theme["line"]}"/>',
+        svg_text(42, 473, "TOP PROJECTS", "eyebrow"),
+        svg_text(42, 499, project_line, "small"),
+        svg_text(42, 532, f"LAST SYNC / {synced}", "small"),
+        svg_text(678, 532, "github.com/jeremy341", "small", "end"),
+        "</svg>",
+    )
+
 def main() -> None:
     ASSETS.mkdir(exist_ok=True)
     github_token = os.getenv("PROFILE_GH_TOKEN") or os.getenv("GITHUB_TOKEN")
@@ -394,6 +446,10 @@ def main() -> None:
     for theme_name, theme in THEMES.items():
         (ASSETS / f"profile-{theme_name}.svg").write_text(
             render_system_card(theme, github, hackatime),
+            encoding="utf-8",
+        )
+        (ASSETS / f"profile-mobile-{theme_name}.svg").write_text(
+            render_mobile_card(theme, github, hackatime),
             encoding="utf-8",
         )
 
