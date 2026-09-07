@@ -410,7 +410,7 @@ def render_mobile_card(theme: dict[str, str], github: dict[str, str], hackatime:
         f'<rect x="609" y="42" width="62" height="22" rx="11" fill="{theme["text"]}"/>',
         svg_text(640, 57, "ONLINE", "status", "middle"),
         svg_text(42, 111, "IDENTITY", "eyebrow"),
-        svg_text(42, 137, "16y 11m 19d", "value"),
+        svg_text(42, 137, format_age(), "value"),
         svg_text(214, 137, "NRW, Germany", "body"),
         svg_text(454, 137, "Embedded Systems · Edge AI", "body"),
         f'<line x1="24" y1="157" x2="696" y2="157" stroke="{theme["line"]}"/>',
