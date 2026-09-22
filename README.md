@@ -1,7 +1,7 @@
 <div align="center">
 <picture>
-<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=e0202aeea112">
-<img width="100%" alt="Jeremy Darko terminal profile showing ML systems and embedded computing, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=b1c5d752c44b">
+<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=6a652c6a9455">
+<img width="100%" alt="Jeremy Darko terminal profile showing ML systems and embedded computing, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=83ebf3347d24">
 </picture>
 </div>
 
@@ -12,10 +12,9 @@ ML Systems / Computer Engineering; Embedded Systems / Hardware–Software Integr
 ## Selected work
 
 - [MIRA](https://github.com/jeremy341/MIRA-AI): 90.6% and 90.58% mAP50 on the 415-image validation split; these are validation results, not real-world sorting accuracy. The independent 1,375-image test split was not evaluated.
-- [NIMBL](https://github.com/jeremy341/NIMBL): experimental prerelease; comparisons are bounded to the tested setup.
 - [FluidicStudio](https://github.com/jeremy341/microdroplets-ui): core software workflows implemented; pump-driver detection is experimental.
 - [ESP32-S3 Alarm Clock](https://github.com/jeremy341/esp32-alarm-clock): basic serial testing is documented; full-board bring-up is not.
-- [Poorup](https://github.com/jeremy341/Poorup): supporting real-time multiplayer project.
+- [Poorup](https://github.com/jeremy341/Poorup): authoritative Node.js/Socket.IO multiplayer server with reconnect recovery, automated tests and CI.
 
 ## Current research
 

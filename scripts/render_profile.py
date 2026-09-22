@@ -229,13 +229,13 @@ def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) ->
     y = work_heading_y + 25
     mobile_evidence = {
         "MIRA": "90.6% mAP50; EXP-019: 90.58%; 415-image validation split",
-        "NIMBL": "Local context; request budgets; persistent sessions; benchmarks",
+        "Poorup": "Real-time multiplayer; reconnect recovery; server rules; CI",
         "FluidicStudio": "PyQt6 pumps; sensor data; camera workflows; saved sessions",
         "ESP32-S3 Alarm Clock": "PCB; C++ firmware; TFT; WebSerial config",
     }
     mobile_meta = {
         "MIRA": "CV / ML / validation only; 1,375-image test split not evaluated",
-        "NIMBL": "AI Systems  /  Experimental prerelease",
+        "Poorup": "Node.js / Socket.IO / Open-source prototype",
         "FluidicStudio": "Lab software / core workflows; pump-driver detection experimental",
         "ESP32-S3 Alarm Clock": "Basic ESP32 serial tested; full-board bring-up not documented",
     }

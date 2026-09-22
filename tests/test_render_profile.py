@@ -97,8 +97,9 @@ class ProfileLayoutTests(unittest.TestCase):
         module = load_renderer()
         variants = module.render_svg_variants(module.load_profile_data(PROFILE_DATA), FIXED_BERLIN_TIME)
         for svg in variants.values():
-            for text in ("MIRA", "NIMBL", "FluidicStudio", "ESP32-S3 Alarm Clock", "TorchVK", "Early research"):
+            for text in ("MIRA", "Poorup", "FluidicStudio", "ESP32-S3 Alarm Clock", "TorchVK", "Early research"):
                 self.assertIn(text, svg)
+            self.assertNotIn("NIMBL", svg)
             self.assertIn("AI Agents", svg)
             for term in ("Age", "years", "months", "2009-08-12", "Total Commits", "Current Streak", "Hackatime", "Stars", "Repositories", "Added", "Removed"):
                 self.assertNotRegex(svg, rf"\b{re.escape(term)}\b")
@@ -131,8 +132,8 @@ class ProfileLayoutTests(unittest.TestCase):
         module = load_renderer()
         variants = module.render_svg_variants(module.load_profile_data(PROFILE_DATA), FIXED_BERLIN_TIME)
         transitions = (
-            ("415-image validation split", "NIMBL"),
-            ("persistent sessions; benchmarks", "FluidicStudio"),
+            ("415-image validation split", "Poorup"),
+            ("server rules; CI", "FluidicStudio"),
             ("workflows; saved sessions", "ESP32-S3 Alarm Clock"),
         )
         for filename in ("profile-mobile-dark.svg", "profile-mobile-light.svg"):

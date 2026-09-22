@@ -17,11 +17,11 @@
       "href": "https://github.com/jeremy341/MIRA-AI/blob/main/results/experiments_log.md"
     },
     {
-      "name": "NIMBL",
-      "area": "AI Systems",
-      "status": "Experimental prerelease",
-      "proof": "Local context selection, explicit request budgets, persistent sessions and benchmark tooling",
-      "href": "https://github.com/jeremy341/NIMBL"
+      "name": "Poorup",
+      "area": "Real-time multiplayer systems",
+      "status": "Open-source prototype",
+      "proof": "Authoritative Node.js / Socket.IO server, reconnect recovery, automated tests and CI",
+      "href": "https://github.com/jeremy341/Poorup"
     },
     {
       "name": "FluidicStudio",
