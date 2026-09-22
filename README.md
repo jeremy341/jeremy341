@@ -1,7 +1,7 @@
 <div align="center">
 <picture>
-<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=eede509a3c27">
-<img width="100%" alt="Jeremy Darko terminal profile showing ML systems and embedded computing, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=ed0fbb83965b">
+<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=aa36ec8dbb2d">
+<img width="100%" alt="Jeremy Darko terminal profile showing ML systems and embedded computing, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=1b0b7cb62ef8">
 </picture>
 </div>
 
