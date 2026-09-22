@@ -1,0 +1,58 @@
+{
+  "name": "Jeremy Darko",
+  "role": "High School Student · Abitur 2028",
+  "location": "NRW, Germany",
+  "focus": [
+    {"label": "Primary", "value": "ML Systems / Computer Engineering"},
+    {"label": "Secondary", "value": "Embedded Systems / Hardware–Software Integration"},
+    {"label": "Emerging", "value": "GPU Computing / Vulkan / PyTorch Systems"},
+    {"label": "Supporting", "value": "Computer Vision / Full-stack / AI Agents"}
+  ],
+  "selected_work": [
+    {
+      "name": "MIRA",
+      "area": "Computer Vision / ML",
+      "status": "Research project",
+      "proof": "YOLO11n: 90.6% mAP50; EXP-019 repeat: 90.58% on the 415-image validation split",
+      "href": "https://github.com/jeremy341/MIRA-AI/blob/main/results/experiments_log.md"
+    },
+    {
+      "name": "NIMBL",
+      "area": "AI Systems",
+      "status": "Experimental prerelease",
+      "proof": "Local context selection, explicit request budgets, persistent sessions and benchmark tooling",
+      "href": "https://github.com/jeremy341/NIMBL"
+    },
+    {
+      "name": "FluidicStudio",
+      "area": "Lab software / hardware integration",
+      "status": "Core workflows implemented; pump-driver detection experimental",
+      "proof": "PyQt6 pump control, sensor acquisition, camera workflows and session persistence",
+      "href": "https://github.com/jeremy341/microdroplets-ui"
+    },
+    {
+      "name": "ESP32-S3 Alarm Clock",
+      "area": "Embedded / PCB",
+      "status": "Prototype design; basic ESP32 serial communication tested, full-board bring-up not documented",
+      "proof": "Custom PCB, C++ firmware, TFT display and WebSerial configuration",
+      "href": "https://github.com/jeremy341/esp32-alarm-clock"
+    }
+  ],
+  "current_research": {
+    "name": "TorchVK",
+    "status": "Early research",
+    "question": "Can Vulkan Compute execute a minimal PyTorch training loop on consumer GPUs?",
+    "href": "https://github.com/jeremy341/TorchVK"
+  },
+  "supporting_work": [{
+    "name": "Poorup",
+    "area": "Real-time multiplayer systems",
+    "href": "https://github.com/jeremy341/Poorup"
+  }],
+  "stack": "C++ · Python · TypeScript · ESP32 · KiCad · PlatformIO",
+  "links": {
+    "github": "https://github.com/jeremy341",
+    "linkedin": "https://www.linkedin.com/in/jeremy-darko-a0a850413/",
+    "email": "mailto:Jeremyyeboahdarko@gmail.com"
+  }
+}

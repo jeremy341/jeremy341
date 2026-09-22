@@ -1,457 +1,264 @@
-"""Generate Jeremy's GitHub profile system card and project tiles."""
-# Generated SVG files are committed automatically by the refresh workflow.
+"""Render deterministic SVG profile cards from reviewed, curated data."""
 from __future__ import annotations
 
 import datetime as dt
 import html
 import json
 import os
-import urllib.parse
-import urllib.request
+import tempfile
+import textwrap
+import xml.etree.ElementTree as ET
 from pathlib import Path
-from zoneinfo import ZoneInfo
 from typing import Any
+from zoneinfo import ZoneInfo
 
-USERNAME = "jeremy341"
-BIRTH_DATE = dt.date(2009, 8, 12)
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
-GITHUB_API = "https://api.github.com"
-GRAPHQL_API = "https://api.github.com/graphql"
-HACKATIME_API = "https://hackatime.hackclub.com/api/v1/authenticated"
+PROFILE_DATA = ROOT / "scripts" / "profile_data.json"
+BERLIN = ZoneInfo("Europe/Berlin")
+SVG_NS = "http://www.w3.org/2000/svg"
 
+# Dark and light files intentionally retain the same graphite terminal identity.
 THEMES = {
-    "dark": {
-        "bg": "#0c0c0c", "panel": "#181818", "text": "#f5f5f5",
-        "muted": "#9b9b9b", "line": "#333333", "accent": "#f5f5f5",
-    },
-    "light": {
-        "bg": "#0c0c0c", "panel": "#181818", "text": "#f5f5f5",
-        "muted": "#9b9b9b", "line": "#333333", "accent": "#f5f5f5",
-    },
+    "dark": {"background": "#0B0F12", "panel": "#121A1F", "primary": "#F1F6F8", "secondary": "#A8B6BC", "rule": "#2B3940", "accent": "#52D7F2"},
+    "light": {"background": "#0B0F12", "panel": "#121A1F", "primary": "#F1F6F8", "secondary": "#A8B6BC", "rule": "#2B3940", "accent": "#52D7F2"},
 }
+FONT_STACK = "'Cascadia Code','JetBrains Mono',Consolas,monospace"
 
 
-def request_json(
-    url: str,
-    token: str | None = None,
-    *,
-    data: dict[str, Any] | None = None,
-    hackatime: bool = False,
-) -> dict[str, Any] | list[dict[str, Any]]:
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "jeremy341-profile",
-    }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    if hackatime:
-        headers["Accept"] = "application/json"
-    encoded = None
-    if data is not None:
-        headers["Content-Type"] = "application/json"
-        encoded = json.dumps(data).encode("utf-8")
-    request = urllib.request.Request(url, headers=headers, data=encoded)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)
+def load_profile_data(path: Path) -> dict[str, object]:
+    """Load the reviewed profile JSON without consulting runtime services."""
+    with path.open(encoding="utf-8") as source:
+        data = json.load(source)
+    if not isinstance(data, dict):
+        raise ValueError("profile data must be a JSON object")
+    return data
 
 
-def graphql(query: str, variables: dict[str, Any], token: str | None) -> dict[str, Any] | None:
-    if not token:
-        return None
-    try:
-        response = request_json(
-            GRAPHQL_API,
-            token,
-            data={"query": query, "variables": variables},
-        )
-        if isinstance(response, dict) and not response.get("errors"):
-            return response.get("data")
-    except Exception:
-        return None
-    return None
-
-
-def public_repositories(token: str | None) -> list[dict[str, Any]]:
-    repositories: list[dict[str, Any]] = []
-    page = 1
-    while True:
-        url = (
-            f"{GITHUB_API}/users/{USERNAME}/repos"
-            f"?type=owner&sort=updated&per_page=100&page={page}"
-        )
-        batch = request_json(url, token)
-        if not isinstance(batch, list):
-            break
-        repositories.extend(batch)
-        if len(batch) < 100:
-            break
-        page += 1
-    return repositories
-
-
-def code_history(repositories: list[dict[str, Any]], token: str | None) -> tuple[int | None, int | None, int | None]:
-    if not token:
-        return None, None, None
-
-    user_query = "query($login:String!){user(login:$login){id}}"
-    user_data = graphql(user_query, {"login": USERNAME}, token)
-    if not user_data or not user_data.get("user"):
-        return None, None, None
-    author_id = user_data["user"]["id"]
-
-    history_query = """
-    query($owner:String!,$name:String!,$author:ID!,$cursor:String){
-      repository(owner:$owner,name:$name){
-        defaultBranchRef{
-          target{
-            ... on Commit{
-              history(first:100,after:$cursor,author:{id:$author}){
-                nodes{additions deletions}
-                pageInfo{hasNextPage endCursor}
-              }
-            }
-          }
-        }
-      }
-    }
-    """
-
-    commits = additions = deletions = 0
-    for repository in repositories:
-        owner = repository["owner"]["login"]
-        name = repository["name"]
-        cursor = None
-        while True:
-            data = graphql(
-                history_query,
-                {"owner": owner, "name": name, "author": author_id, "cursor": cursor},
-                token,
-            )
-            try:
-                history = data["repository"]["defaultBranchRef"]["target"]["history"]
-            except (TypeError, KeyError):
-                break
-            for node in history["nodes"]:
-                commits += 1
-                additions += int(node.get("additions", 0))
-                deletions += int(node.get("deletions", 0))
-            page = history["pageInfo"]
-            if not page["hasNextPage"]:
-                break
-            cursor = page["endCursor"]
-    return commits, additions, deletions
-
-
-def github_metrics(token: str | None) -> dict[str, str]:
-    repositories = public_repositories(token)
-    stars = sum(int(repo.get("stargazers_count", 0)) for repo in repositories)
-    commits, additions, deletions = code_history(repositories, token)
-
-    def number(value: int | None) -> str:
-        return f"{value:,}" if value is not None else "sync pending"
-
-    if additions is None or deletions is None:
-        code = "sync pending"
-    else:
-        net = additions - deletions
-        code = f"+{additions:,} / -{deletions:,} / {net:,} net"
-
-    return {
-        "repositories": str(len(repositories)),
-        "stars": f"{stars:,}",
-        "commits": number(commits),
-        "code": code,
-    }
-
-
-def format_seconds(value: float | int) -> str:
-    minutes = int(value) // 60
-    hours, minutes = divmod(minutes, 60)
-    return f"{hours:,}h {minutes:02d}m"
-
-
-def hackatime_metrics(token: str | None) -> dict[str, str]:
-    if not token:
-        return {}
-
-    today = dt.date.today()
-    start_date = BIRTH_DATE.isoformat()
-    end_date = today.isoformat()
-    endpoints = {
-        # This is the same all-time total used by the official Hackatime/WakaTime-compatible view.
-        "stats": "https://hackatime.hackclub.com/api/v1/stats",
-        "all_time": "https://hackatime.hackclub.com/api/v1/users/current/all_time_since_today",
-        "hours": f"{HACKATIME_API}/hours?{urllib.parse.urlencode({'start_date': start_date, 'end_date': end_date})}",
-        "streak": f"{HACKATIME_API}/streak",
-        "projects": f"{HACKATIME_API}/projects?include_archived=false",
-    }
-
-    responses: dict[str, dict[str, Any]] = {}
-    for name, url in endpoints.items():
-        try:
-            response = request_json(url, token, hackatime=True)
-            if isinstance(response, dict):
-                # Some deployments wrap OAuth responses in a data object.
-                payload = response.get("data") if isinstance(response.get("data"), dict) else response
-                responses[name] = payload
-        except Exception:
-            continue
-
-    result: dict[str, str] = {}
-    # Prefer Hackatime's direct stats total, which is the dashboard-compatible value.
-    stats = responses.get("stats", {})
-    stats_data = stats.get("data", {}) if isinstance(stats.get("data"), dict) else stats
-    total_seconds = stats_data.get("total_seconds") if isinstance(stats_data, dict) else None
-    if total_seconds is None:
-        total_seconds = responses.get("hours", {}).get("total_seconds")
-    if total_seconds is None:
-        all_time = responses.get("all_time", {})
-        grand_total = all_time.get("grand_total", {}) if isinstance(all_time, dict) else {}
-        total_seconds = grand_total.get("total_seconds") or all_time.get("total_seconds")
-    if total_seconds is not None:
-        result["time"] = format_seconds(total_seconds)
-
-    streak_days = responses.get("streak", {}).get("streak_days")
-    if streak_days is not None:
-        days = int(streak_days)
-        result["streak"] = f"{days} day{'s' if days != 1 else ''}"
-
-    projects_payload = responses.get("projects", {})
-    projects = projects_payload.get("projects", []) if isinstance(projects_payload, dict) else projects_payload
-    if isinstance(projects, list):
-        ranked = sorted(
-            (project for project in projects if isinstance(project, dict)),
-            key=lambda project: float(project.get("total_seconds", 0)),
-            reverse=True,
-        )[:3]
-        if ranked:
-            result["projects"] = " · ".join(
-                f"{project.get('name', 'Unknown')} {format_seconds(project.get('total_seconds', 0))}"
-                for project in ranked
-            )
-
-    return result
-
-
-def current_age_parts() -> tuple[int, int, int]:
-    """Return precise age as completed years, months, and days."""
-    today = dt.date.today()
-    years = today.year - BIRTH_DATE.year
-    if (today.month, today.day) < (BIRTH_DATE.month, BIRTH_DATE.day):
-        years -= 1
-
-    anchor = BIRTH_DATE.replace(year=BIRTH_DATE.year + years)
-    months = (today.year - anchor.year) * 12 + today.month - anchor.month
-    if today.day < anchor.day:
-        months -= 1
-
-    month_index = anchor.month - 1 + months
-    anchor_month = month_index % 12 + 1
-    anchor_year = anchor.year + month_index // 12
-    anchor_after_months = anchor.replace(year=anchor_year, month=anchor_month)
-    days = (today - anchor_after_months).days
-    return years, months, days
-
-
-def format_age() -> str:
-    years, months, days = current_age_parts()
-    return f"{years} years {months} months {days} days"
-
-
-def esc(value: object) -> str:
+def _e(value: object) -> str:
     return html.escape(str(value), quote=True)
 
 
-def svg_text(x: int, y: int, value: object, css_class: str, anchor: str | None = None) -> str:
-    anchor_attr = f' text-anchor="{anchor}"' if anchor else ""
-    return f'<text x="{x}" y="{y}" class="{css_class}"{anchor_attr}>{esc(value)}</text>'
+def wrap_svg_text(value: str, max_chars: int) -> list[str]:
+    """Wrap prose on word boundaries, splitting only words longer than the limit."""
+    if max_chars < 1:
+        raise ValueError("max_chars must be positive")
+    return textwrap.wrap(
+        str(value), width=max_chars, break_long_words=True,
+        break_on_hyphens=False, replace_whitespace=True, drop_whitespace=True,
+    ) or [""]
 
 
-def render_system_card(theme: dict[str, str], github: dict[str, str], hackatime: dict[str, str]) -> str:
-    synced = dt.datetime.now(ZoneInfo("Europe/Berlin")).strftime("%Y-%m-%d %H:%M %Z")
-    added, removed, net = "—", "—", "—"
-    if github["code"] != "sync pending":
-        try:
-            chunks = github["code"].replace(" net", "").split(" / ")
-            added, removed, net = chunks
-        except ValueError:
-            pass
+def _text(x: int, y: int, value: object, *, size: int = 16, color: str = "primary", weight: int = 400) -> str:
+    return f'<text x="{x}" y="{y}" class="{color}" font-size="{size}" font-weight="{weight}">{_e(value)}</text>'
 
-    parts = [
-        '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="780" viewBox="0 0 1000 780" role="img" aria-label="Jeremy Darko PowerShell developer profile">',
-        "<style>",
-        f".chrome{{fill:{theme['text']};font:12px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".chrome-muted{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".prompt{{fill:{theme['text']};font:700 14px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".command{{fill:{theme['text']};font:14px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".label{{fill:{theme['muted']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".value{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".table-head{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.5px}}",
-        f".table-value{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        "</style>",
-        f'<rect width="1000" height="780" rx="9" fill="{theme["bg"]}"/>',
-        f'<rect x="1" y="1" width="998" height="778" rx="8" fill="none" stroke="{theme["line"]}"/>',
 
-        # Windows Terminal title bar
-        f'<path d="M9 0h982a9 9 0 0 1 9 9v43H0V9a9 9 0 0 1 9-9z" fill="{theme["panel"]}"/>',
-        f'<rect x="12" y="9" width="272" height="43" rx="6" fill="{theme["bg"]}"/>',
-        f'<rect x="24" y="20" width="22" height="22" rx="3" fill="{theme["text"]}"/>',
-        f'<text x="35" y="36" text-anchor="middle" style="fill:{theme["bg"]};font:700 11px Cascadia Code,monospace">&gt;_</text>',
-        svg_text(58, 36, "PowerShell 7.5.2", "chrome"),
-        svg_text(301, 35, "+", "chrome"),
-        svg_text(332, 35, "⌄", "chrome-muted"),
-        svg_text(830, 34, f"LAST SYNC / {synced}", "chrome-muted", "end"),
-        f'<rect x="844" y="0" width="52" height="52" fill="transparent"/>',
-        f'<rect x="896" y="0" width="52" height="52" fill="transparent"/>',
-        f'<rect x="948" y="0" width="52" height="52" fill="transparent"/>',
-        svg_text(870, 32, "—", "chrome", "middle"),
-        svg_text(922, 32, "□", "chrome", "middle"),
-        svg_text(974, 32, "×", "chrome", "middle"),
-        f'<line x1="0" y1="52" x2="1000" y2="52" stroke="{theme["line"]}"/>',
+def _wrapped(x: int, y: int, value: str, max_chars: int, *, size: int = 14, color: str = "primary", line_height: int | None = None, weight: int = 400) -> tuple[str, int]:
+    step = line_height if line_height is not None else size + 6
+    rows = wrap_svg_text(value, max_chars)
+    markup = "".join(_text(x, y + index * step, row, size=size, color=color, weight=weight) for index, row in enumerate(rows))
+    return markup, len(rows) * step
 
-        # Command 1
-        svg_text(30, 86, "PS C:\\Users\\Jeremy>", "prompt"),
-        svg_text(205, 86, "Get-DeveloperProfile", "command"),
-        svg_text(30, 116, "Name", "label"), svg_text(126, 116, ":", "label"), svg_text(150, 116, "Jeremy Darko", "value"),
-        svg_text(30, 142, "Age", "label"), svg_text(126, 142, ":", "label"), svg_text(150, 142, format_age(), "value"),
-        svg_text(30, 168, "Location", "label"), svg_text(126, 168, ":", "label"), svg_text(150, 168, "NRW, Germany", "value"),
-        svg_text(30, 194, "Role", "label"), svg_text(126, 194, ":", "label"), svg_text(150, 194, "Student / Embedded Systems", "value"),
-        svg_text(30, 220, "Focus", "label"), svg_text(126, 220, ":", "label"), svg_text(150, 220, "Hardware, Firmware, Applied AI", "value"),
 
-        # Command 2
-        svg_text(30, 260, "PS C:\\Users\\Jeremy>", "prompt"),
-        svg_text(205, 260, "Get-GitHubMetrics | Format-Table", "command"),
-        svg_text(30, 291, "Repositories", "table-head"),
-        svg_text(170, 291, "Stars", "table-head"),
-        svg_text(260, 291, "Commits", "table-head"),
-        svg_text(370, 291, "Added", "table-head"),
-        svg_text(520, 291, "Removed", "table-head"),
-        svg_text(675, 291, "Net", "table-head"),
-        svg_text(30, 309, "------------", "label"),
-        svg_text(170, 309, "-----", "label"),
-        svg_text(260, 309, "-------", "label"),
-        svg_text(370, 309, "-------------", "label"),
-        svg_text(520, 309, "-------------", "label"),
-        svg_text(675, 309, "-------------", "label"),
-        svg_text(30, 333, github["repositories"], "table-value"),
-        svg_text(170, 333, github["stars"], "table-value"),
-        svg_text(260, 333, github["commits"], "table-value"),
-        svg_text(370, 333, added, "table-value"),
-        svg_text(520, 333, removed, "table-value"),
-        svg_text(675, 333, net, "table-value"),
+def _link(x: int, y: int, value: object, href: object, *, size: int = 17) -> str:
+    return f'<a href="{_e(href)}">{_text(x, y, value, size=size, color="accent", weight=600)}</a>'
 
-        # Command 3
-        svg_text(30, 376, "PS C:\\Users\\Jeremy>", "prompt"),
-        svg_text(205, 376, "Get-CurrentProject", "command"),
-        svg_text(30, 406, "Name", "label"), svg_text(126, 406, ":", "label"), svg_text(150, 406, "torchVK", "value"),
-        svg_text(30, 432, "Type", "label"), svg_text(126, 432, ":", "label"), svg_text(150, 432, "Experimental Research Project", "value"),
-        svg_text(30, 458, "State", "label"), svg_text(126, 458, ":", "label"), svg_text(150, 458, "Research Phase", "value"),
-        svg_text(30, 484, "Target", "label"), svg_text(126, 484, ":", "label"), svg_text(150, 484, "Exploratory Systems Research", "value"),
 
-        # Command 4
-        svg_text(30, 524, "PS C:\\Users\\Jeremy>", "prompt"),
-        svg_text(205, 524, "Get-Toolchain", "command"),
-        svg_text(30, 554, "Languages", "label"), svg_text(126, 554, ":", "label"), svg_text(150, 554, "C++, C, Python, TypeScript, JavaScript", "value"),
-        svg_text(30, 580, "Hardware", "label"), svg_text(126, 580, ":", "label"), svg_text(150, 580, "ESP32, Arduino, I2C, SPI, Custom PCBs", "value"),
-        svg_text(30, 606, "Tools", "label"), svg_text(126, 606, ":", "label"), svg_text(150, 606, "KiCad, PlatformIO, Fusion 360, Git", "value"),
+def _root(width: int, height: int, theme: dict[str, str], title: str, description: str, body: list[str]) -> str:
+    style = (
+        f'<style>text{{font-family:{FONT_STACK}}}.primary{{fill:{theme["primary"]}}}'
+        f'.secondary{{fill:{theme["secondary"]}}}.accent{{fill:{theme["accent"]}}}'
+        f'.rule{{stroke:{theme["rule"]}}}a{{text-decoration:none}}</style>'
+    )
+    content = [
+        f'<svg xmlns="{SVG_NS}" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-labelledby="card-title card-desc">',
+        f'<title id="card-title">{_e(title)}</title>',
+        f'<desc id="card-desc">{_e(description)}</desc>',
+        style,
+        f'<rect width="{width}" height="{height}" fill="{theme["background"]}"/>',
+        f'<rect x="1" y="1" width="{width - 2}" height="{height - 2}" fill="none" stroke="{theme["rule"]}"/>',
+        *body,
+        "</svg>",
+    ]
+    return "".join(content)
+
+
+def _terminal_bar(width: int, theme: dict[str, str]) -> list[str]:
+    return [
+        f'<rect x="1" y="1" width="{width - 2}" height="48" fill="{theme["panel"]}"/>',
+        f'<path d="M {width - 96} 1 V 49 M {width - 64} 1 V 49 M {width - 32} 1 V 49" class="rule"/>',
+        _text(18, 31, "PowerShell 7.5.2", size=16, color="primary", weight=600),
+        f'<path d="M {width - 82} 22 h12 M {width - 51} 27 l6 -6 6 6 M {width - 20} 20 l8 8 M {width - 12} 20 l-8 8" fill="none" class="secondary" stroke="{theme["secondary"]}" stroke-width="1.5"/>',
     ]
 
-    cursor_y = 660
-    if hackatime:
-        parts.extend([
-            svg_text(30, 646, "PS C:\\Users\\Jeremy>", "prompt"),
-            svg_text(205, 646, "Get-HackatimeSummary -Range AllTime | Format-Table", "command"),
-            svg_text(30, 674, "Total Coding", "table-head"),
-            svg_text(210, 674, "Current Streak", "table-head"),
-            svg_text(390, 674, "Top Projects", "table-head"),
-            svg_text(30, 690, "----------------", "label"),
-            svg_text(210, 690, "----------------", "label"),
-            svg_text(390, 690, "----------------------------------------------------------", "label"),
-            svg_text(30, 712, hackatime.get("time", "—"), "table-value"),
-            svg_text(210, 712, hackatime.get("streak", "—"), "table-value"),
-            svg_text(390, 712, hackatime.get("projects", "")[:62], "table-value"),
-            svg_text(30, 754, "PS C:\\Users\\Jeremy>", "prompt"),
-            f'<rect x="205" y="740" width="9" height="18" fill="{theme["text"]}"><animate attributeName="opacity" values="1;1;0;0;1" dur="1.2s" repeatCount="indefinite"/></rect>',
-        ])
-    else:
-        parts.extend([
-            svg_text(30, cursor_y, "PS C:\\Users\\Jeremy>", "prompt"),
-            f'<rect x="205" y="{cursor_y - 14}" width="9" height="18" fill="{theme["text"]}"><animate attributeName="opacity" values="1;1;0;0;1" dur="1.2s" repeatCount="indefinite"/></rect>',
-        ])
 
-    parts.append("</svg>")
-    return "".join(parts)
+def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -> str:
+    width, height = 1000, 900
+    timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
+    body = _terminal_bar(width, theme)
+    body.extend([
+        _text(42, 104, profile["name"], size=31, color="primary", weight=700),
+        _text(42, 134, profile["role"], size=16, color="accent", weight=600),
+        _text(42, 159, profile["location"], size=14, color="secondary"),
+        _text(42, 202, "SELECTED WORK  /  VERIFIED PROJECT NOTES", size=12, color="accent", weight=700),
+    ])
+
+    y = 235
+    for index, work in enumerate(profile.get("selected_work", []), start=1):
+        body.append(_text(42, y, f"{index:02d}", size=12, color="secondary", weight=600))
+        body.append(_link(83, y, work["name"], work["href"], size=18))
+        # Each metadata/evidence row wraps within the fixed project column; no claim is clipped.
+        meta, meta_height = _wrapped(83, y + 23, f"{work['area']}  /  {work['status']}", 75, size=13, color="secondary", line_height=18)
+        proof_text = work["proof"]
+        if work["name"] == "MIRA":
+            proof_text += "; 1,375-image test split not evaluated"
+        proof, proof_height = _wrapped(83, y + 24 + meta_height, proof_text, 68, size=13, color="primary", line_height=18)
+        body.extend([meta, proof, f'<path d="M 42 {y + 34 + meta_height + proof_height} H 638" class="rule"/>'])
+        y += 50 + meta_height + proof_height
+
+    # Right-hand information rail uses hierarchy and whitespace, not project tiles.
+    body.extend([
+        f'<path d="M 674 86 V 780" class="rule"/>',
+        _text(706, 104, "FOCUS", size=12, color="accent", weight=700),
+    ])
+    focus_y = 136
+    for focus in profile.get("focus", []):
+        body.append(_text(706, focus_y, focus["label"].upper(), size=11, color="secondary", weight=600))
+        focus_copy, focus_height = _wrapped(706, focus_y + 21, focus["value"], 30, size=14, color="primary", line_height=19)
+        body.append(focus_copy)
+        focus_y += 26 + focus_height
+    research = profile["current_research"]
+    body.extend([
+        _text(706, focus_y + 13, "CURRENT RESEARCH", size=12, color="accent", weight=700),
+        _link(706, focus_y + 44, research["name"], research["href"], size=18),
+        _text(706, focus_y + 66, research["status"], size=13, color="secondary", weight=600),
+    ])
+    question, _ = _wrapped(706, focus_y + 90, research["question"], 30, size=13, color="primary", line_height=19)
+    body.append(question)
+    body.extend([
+        _text(706, 710, "STACK", size=12, color="accent", weight=700),
+    ])
+    stack, _ = _wrapped(706, 738, profile["stack"], 31, size=13, color="primary", line_height=19)
+    body.extend([stack, _text(42, 856, f"LAST SYNC / {timestamp}", size=12, color="secondary")])
+    body.append(_text(42, 878, "PS> █", size=13, color="accent", weight=600))
+    return _root(width, height, theme, f"{profile['name']} — profile", "Industrial PowerShell profile card with focus hierarchy, four selected projects, early Vulkan research, stack and Berlin sync time.", body)
 
 
+def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -> str:
+    width = 400
+    x = 20
+    timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
+    body = _terminal_bar(width, theme)
+    body.extend([
+        _text(x, 80, profile["name"], size=25, color="primary", weight=700),
+        _text(x, 105, profile["role"], size=14, color="accent", weight=600),
+        _text(x, 125, profile["location"], size=14, color="secondary"),
+        _text(x, 155, "FOCUS", size=12, color="accent", weight=700),
+    ])
+    focus_y = 178
+    compact_focus = {
+        "Primary": "PRIMARY / ML systems / Comp. Engineering",
+        "Secondary": "SECONDARY / Embedded / hardware-software",
+        "Emerging": "EMERGING / GPU / Vulkan / PyTorch systems",
+        "Supporting": "SUPPORTING / Computer Vision / Full-stack / AI Agents",
+    }
+    for focus in profile.get("focus", []):
+        focus_copy, height = _wrapped(x, focus_y, compact_focus.get(focus["label"], f"{focus['label'].upper()} / {focus['value']}"), 42, size=14, color="primary", line_height=18)
+        body.append(focus_copy)
+        focus_y += max(18, height)
+    work_heading_y = focus_y + 5
+    body.append(_text(x, work_heading_y, "SELECTED WORK", size=12, color="accent", weight=700))
+    y = work_heading_y + 29
+    mobile_evidence = {
+        "MIRA": "90.6% mAP50; EXP-019: 90.58%; 415-image validation split",
+        "NIMBL": "Local context; request budgets; persistent sessions; benchmarks",
+        "FluidicStudio": "PyQt6 pumps; sensor data; camera workflows; saved sessions",
+        "ESP32-S3 Alarm Clock": "PCB; C++ firmware; TFT; WebSerial config",
+    }
+    mobile_meta = {
+        "MIRA": "CV / ML / validation only; 1,375-image test split not evaluated",
+        "NIMBL": "AI Systems  /  Experimental prerelease",
+        "FluidicStudio": "Lab software / core workflows; pump-driver detection experimental",
+        "ESP32-S3 Alarm Clock": "Basic ESP32 serial tested; full-board bring-up not documented",
+    }
+    for index, work in enumerate(profile.get("selected_work", []), start=1):
+        body.append(_text(x, y, f"{index:02d}", size=11, color="secondary", weight=600))
+        body.append(_link(x + 37, y, work["name"], work["href"], size=16))
+        meta, meta_height = _wrapped(x + 37, y + 19, mobile_meta.get(work["name"], f"{work['area']}  /  {work['status']}"), 34, size=13, color="secondary", line_height=15)
+        proof, proof_height = _wrapped(x + 37, y + 20 + meta_height, mobile_evidence.get(work["name"], work["proof"]), 34, size=14, color="primary", line_height=16)
+        body.extend([meta, proof])
+        y += 28 + meta_height + proof_height
+        body.append(f'<path d="M {x} {y - 18} H {width - x}" class="rule"/>')
 
-def render_mobile_card(theme: dict[str, str], github: dict[str, str], hackatime: dict[str, str]) -> str:
-    """Render a single-screen, mobile-first profile card."""
-    synced = dt.datetime.now(ZoneInfo("Europe/Berlin")).strftime("%d.%m.%Y %H:%M %Z")
-    project_line = hackatime.get("projects", "No project data")[:58]
-    return "".join([
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560" role="img" aria-labelledby="mobile-title mobile-desc">',
-        '<title id="mobile-title">Jeremy Darko mobile developer profile</title>',
-        '<desc id="mobile-desc">Compact black and white profile card with live GitHub and Hackatime metrics.</desc>',
-        "<style>",
-        f".eyebrow{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:1.4px}}",
-        f".name{{fill:{theme['text']};font:700 26px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.4px}}",
-        f".status{{fill:{theme['bg']};font:700 10px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:1px}}",
-        f".label{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace;letter-spacing:.8px}}",
-        f".value{{fill:{theme['text']};font:700 15px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".body{{fill:{theme['text']};font:13px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        f".small{{fill:{theme['muted']};font:11px 'Cascadia Code','JetBrains Mono',Consolas,monospace}}",
-        "</style>",
-        f'<rect width="720" height="560" rx="18" fill="{theme["bg"]}"/>',
-        f'<rect x="1" y="1" width="718" height="558" rx="17" fill="none" stroke="{theme["line"]}"/>',
-        f'<rect x="24" y="22" width="672" height="64" rx="10" fill="{theme["panel"]}"/>',
-        svg_text(42, 47, "SYSTEM PROFILE / MOBILE", "eyebrow"),
-        svg_text(42, 73, "JEREMY DARKO", "name"),
-        f'<rect x="609" y="42" width="62" height="22" rx="11" fill="{theme["text"]}"/>',
-        svg_text(640, 57, "ONLINE", "status", "middle"),
-        svg_text(42, 111, "IDENTITY", "eyebrow"),
-        svg_text(42, 137, format_age(), "value"),
-        svg_text(214, 137, "NRW, Germany", "body"),
-        svg_text(454, 137, "Embedded Systems · Edge AI", "body"),
-        f'<line x1="24" y1="157" x2="696" y2="157" stroke="{theme["line"]}"/>',
-        svg_text(42, 184, "LIVE METRICS", "eyebrow"),
-        svg_text(42, 210, "GITHUB", "label"),
-        svg_text(42, 232, f'{github["repositories"]} repos · {github["stars"]} stars', "value"),
-        svg_text(268, 210, "HACKATIME", "label"),
-        svg_text(268, 232, hackatime.get("time", "—"), "value"),
-        svg_text(496, 210, "STREAK", "label"),
-        svg_text(496, 232, hackatime.get("streak", "—"), "value"),
-        f'<rect x="24" y="254" width="672" height="112" rx="12" fill="{theme["panel"]}"/>',
-        svg_text(42, 280, "CURRENT PROJECT", "eyebrow"),
-        svg_text(42, 311, "torchVK", "value"),
-        svg_text(42, 333, "Research Phase", "body"),
-        svg_text(42, 353, "Experimental systems research", "small"),
-        svg_text(42, 397, "STACK", "eyebrow"),
-        svg_text(42, 424, "C++ · Python · ESP32 · KiCad · PlatformIO", "body"),
-        f'<line x1="24" y1="445" x2="696" y2="445" stroke="{theme["line"]}"/>',
-        svg_text(42, 473, "TOP PROJECTS", "eyebrow"),
-        svg_text(42, 499, project_line, "small"),
-        svg_text(42, 532, f"LAST SYNC / {synced}", "small"),
-        svg_text(678, 532, "github.com/jeremy341", "small", "end"),
-        "</svg>",
-    )
+    research = profile["current_research"]
+    body.extend([
+        _text(x, y + 3, "CURRENT RESEARCH", size=12, color="accent", weight=700),
+        _link(x, y + 29, research["name"], research["href"], size=16),
+        _text(x + 91, y + 29, research["status"], size=13, color="secondary", weight=600),
+    ])
+    question, question_height = _wrapped(x, y + 51, research["question"], 40, size=14, color="primary", line_height=17)
+    body.append(question)
+    stack_y = y + 51 + question_height + 8
+    body.extend([_text(x, stack_y, "STACK", size=12, color="accent", weight=700)])
+    stack, stack_height = _wrapped(x, stack_y + 18, profile["stack"], 34, size=14, color="primary", line_height=17)
+    body.extend([
+        stack,
+        _text(x, stack_y + 22 + stack_height, f"LAST SYNC / {timestamp}", size=11, color="secondary"),
+        _text(x, stack_y + 39 + stack_height, "PS> █", size=13, color="accent", weight=600),
+    ])
+    height = stack_y + 49 + stack_height
+    if height > 860:
+        raise ValueError(f"mobile profile content exceeds 860 units ({height})")
+    return _root(width, height, theme, f"{profile['name']} — profile", "Compact PowerShell profile card with focus hierarchy, four selected projects, early Vulkan research, stack and Berlin sync time.", body)
+
+
+def _render(profile: dict[str, Any], theme: dict[str, str], *, mobile: bool, now: dt.datetime) -> str:
+    return _mobile(profile, theme, now) if mobile else _desktop(profile, theme, now)
+
+
+def render_svg_variants(profile: dict[str, object], now: dt.datetime | None = None) -> dict[str, str]:
+    """Return all four SVG documents; no environment or network access occurs."""
+    timestamp = now if now is not None else dt.datetime.now(BERLIN)
+    result: dict[str, str] = {}
+    for theme_name, theme in THEMES.items():
+        for mobile in (False, True):
+            prefix = "profile-mobile-" if mobile else "profile-"
+            result[f"{prefix}{theme_name}.svg"] = _render(profile, theme, mobile=mobile, now=timestamp)
+    return result
+
+
+def write_svg_variants(variants: dict[str, str], output_dir: Path) -> None:
+    """Validate every SVG before staging sibling temp files and replacing outputs."""
+    for filename, svg in variants.items():
+        if Path(filename).name != filename or not filename.endswith(".svg"):
+            raise ValueError(f"invalid SVG output name: {filename!r}")
+        root = ET.fromstring(svg)
+        if root.tag not in {"svg", f"{{{SVG_NS}}}svg"}:
+            raise ValueError(f"{filename} must contain an SVG root element")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    temporary: list[tuple[Path, Path]] = []
+    try:
+        for filename, svg in variants.items():
+            fd, temp_name = tempfile.mkstemp(prefix=f".{filename}.", suffix=".tmp", dir=output_dir)
+            temp_path = Path(temp_name)
+            temporary.append((temp_path, output_dir / filename))
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
+                stream.write(svg)
+        for temp_path, destination in temporary:
+            os.replace(temp_path, destination)
+    except Exception:
+        for temp_path, _ in temporary:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+
 
 def main() -> None:
-    ASSETS.mkdir(exist_ok=True)
-    github_token = os.getenv("PROFILE_GH_TOKEN") or os.getenv("GITHUB_TOKEN")
-    github = github_metrics(github_token)
-    hackatime_token = os.getenv("HACKATIME_ACCESS_TOKEN") or os.getenv("HACKATIME_API_KEY")
-    hackatime = hackatime_metrics(hackatime_token)
-
-    for theme_name, theme in THEMES.items():
-        (ASSETS / f"profile-{theme_name}.svg").write_text(
-            render_system_card(theme, github, hackatime),
-            encoding="utf-8",
-        )
-        (ASSETS / f"profile-mobile-{theme_name}.svg").write_text(
-            render_mobile_card(theme, github, hackatime),
-            encoding="utf-8",
-        )
+    profile = load_profile_data(PROFILE_DATA)
+    write_svg_variants(render_svg_variants(profile), ASSETS)
 
 
 if __name__ == "__main__":
