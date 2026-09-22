@@ -80,6 +80,19 @@ class ProfileRendererTests(unittest.TestCase):
 
 
 class ProfileLayoutTests(unittest.TestCase):
+    def test_variants_use_a_power_shell_transcript_structure(self):
+        renderer = load_renderer()
+        variants = renderer.render_svg_variants(renderer.load_profile_data(PROFILE_DATA), FIXED_BERLIN_TIME)
+        for svg in variants.values():
+            self.assertTrue(
+                "PS C:\\Users\\Jeremy\\portfolio&gt;" in svg
+                or "PS C:\\Users\\Jeremy&gt;" in svg
+            )
+            for command in ("Get-DeveloperProfile", "Get-Focus", "Get-SelectedWork", "Get-CurrentResearch"):
+                self.assertIn(command, svg)
+            self.assertIn("[online]", svg)
+            self.assertNotIn("SELECTED WORK  /  VERIFIED PROJECT NOTES", svg)
+
     def test_variants_contain_selected_work_and_not_activity_metrics(self):
         module = load_renderer()
         variants = module.render_svg_variants(module.load_profile_data(PROFILE_DATA), FIXED_BERLIN_TIME)

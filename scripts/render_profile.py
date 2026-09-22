@@ -83,65 +83,111 @@ def _root(width: int, height: int, theme: dict[str, str], title: str, descriptio
     return "".join(content)
 
 
-def _terminal_bar(width: int, theme: dict[str, str]) -> list[str]:
+def _prompt(
+    x: int,
+    y: int,
+    command: str,
+    *,
+    command_x: int,
+    path: str = "PS C:\\Users\\Jeremy\\portfolio>",
+    size: int = 13,
+) -> list[str]:
+    """Render a prompt and command as two aligned terminal transcript cells."""
     return [
-        f'<rect x="1" y="1" width="{width - 2}" height="48" fill="{theme["panel"]}"/>',
-        f'<path d="M {width - 96} 1 V 49 M {width - 64} 1 V 49 M {width - 32} 1 V 49" class="rule"/>',
-        _text(18, 31, "PowerShell 7.5.2", size=16, color="primary", weight=600),
-        f'<path d="M {width - 82} 22 h12 M {width - 51} 27 l6 -6 6 6 M {width - 20} 20 l8 8 M {width - 12} 20 l-8 8" fill="none" class="secondary" stroke="{theme["secondary"]}" stroke-width="1.5"/>',
+        _text(x, y, path, size=size, color="accent", weight=600),
+        _text(command_x, y, command, size=size, color="primary", weight=600),
     ]
+
+
+def _terminal_bar(width: int, theme: dict[str, str], timestamp: str | None = None) -> list[str]:
+    """Render Windows Terminal chrome without macOS-style traffic lights."""
+    body = [
+        f'<rect x="1" y="1" width="{width - 2}" height="54" fill="{theme["panel"]}"/>',
+        f'<path d="M 1 54 H {width - 1}" class="rule"/>',
+        f'<rect x="18" y="13" width="28" height="28" rx="3" fill="{theme["background"]}" stroke="{theme["accent"]}"/>',
+        _text(24, 32, ">_", size=13, color="accent", weight=700),
+        _text(58, 31, "PowerShell 7.5.2", size=15, color="primary", weight=600),
+        f'<path d="M {width - 90} 1 V 55 M {width - 60} 1 V 55 M {width - 30} 1 V 55" class="rule"/>',
+        f'<path d="M {width - 75} 27 h12 M {width - 47} 31 l5 -5 5 5 M {width - 20} 24 l8 8 M {width - 12} 24 l-8 8" fill="none" class="secondary" stroke="{theme["secondary"]}" stroke-width="1.5"/>',
+    ]
+    if timestamp and width >= 700:
+        body.insert(5, _text(width - 305, 31, f"LAST SYNC / {timestamp}", size=11, color="secondary"))
+    return body
+
+
+def _terminal_separator(y: int, *, x1: int = 42, x2: int = 958) -> str:
+    return f'<path d="M {x1} {y} H {x2}" class="rule"/>'
 
 
 def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -> str:
     width, height = 1000, 900
     timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
-    body = _terminal_bar(width, theme)
+    body = _terminal_bar(width, theme, timestamp)
+    body.extend(_prompt(42, 86, "Get-DeveloperProfile", command_x=285))
     body.extend([
-        _text(42, 104, profile["name"], size=31, color="primary", weight=700),
-        _text(42, 134, profile["role"], size=16, color="accent", weight=600),
-        _text(42, 159, profile["location"], size=14, color="secondary"),
-        _text(42, 202, "SELECTED WORK  /  VERIFIED PROJECT NOTES", size=12, color="accent", weight=700),
+        _text(42, 112, "Name", size=12, color="secondary", weight=600),
+        _text(138, 112, ":", size=12, color="secondary"),
+        _text(158, 112, profile["name"], size=15, color="primary", weight=600),
+        _text(42, 134, "Role", size=12, color="secondary", weight=600),
+        _text(138, 134, ":", size=12, color="secondary"),
+        _text(158, 134, profile["role"], size=13, color="primary"),
+        _text(42, 156, "Location", size=12, color="secondary", weight=600),
+        _text(138, 156, ":", size=12, color="secondary"),
+        _text(158, 156, profile["location"], size=13, color="primary"),
+        _text(42, 178, "Status", size=12, color="secondary", weight=600),
+        _text(138, 178, ":", size=12, color="secondary"),
+        _text(158, 178, "[online]  profile snapshot", size=13, color="accent", weight=600),
+        _terminal_separator(199),
     ])
 
-    y = 235
+    left_x, left_value_x = 42, 83
+    right_x, right_value_x = 658, 760
+    body.extend(_prompt(left_x, 225, "Get-SelectedWork", command_x=285))
+    body.extend(_prompt(right_x, 225, "Get-Focus", command_x=746, path="PS>"))
+
+    y = 256
     for index, work in enumerate(profile.get("selected_work", []), start=1):
-        body.append(_text(42, y, f"{index:02d}", size=12, color="secondary", weight=600))
-        body.append(_link(83, y, work["name"], work["href"], size=18))
-        # Each metadata/evidence row wraps within the fixed project column; no claim is clipped.
-        meta, meta_height = _wrapped(83, y + 23, f"{work['area']}  /  {work['status']}", 75, size=13, color="secondary", line_height=18)
+        body.append(_text(left_x, y, f"[{index:02d}]", size=11, color="secondary", weight=600))
+        body.append(_link(left_value_x, y, work["name"], work["href"], size=16))
+        meta, meta_height = _wrapped(left_value_x, y + 20, f"STATUS : {work['status']}", 58, size=12, color="secondary", line_height=16)
         proof_text = work["proof"]
         if work["name"] == "MIRA":
             proof_text += "; 1,375-image test split not evaluated"
-        proof, proof_height = _wrapped(83, y + 24 + meta_height, proof_text, 68, size=13, color="primary", line_height=18)
-        body.extend([meta, proof, f'<path d="M 42 {y + 34 + meta_height + proof_height} H 638" class="rule"/>'])
-        y += 50 + meta_height + proof_height
+        proof, proof_height = _wrapped(left_value_x, y + 21 + meta_height, f"PROOF  : {proof_text}", 61, size=12, color="primary", line_height=16)
+        body.extend([meta, proof])
+        divider_y = y + 28 + meta_height + proof_height
+        body.append(_terminal_separator(divider_y, x1=left_x, x2=610))
+        y = divider_y + 25
 
-    # Right-hand information rail uses hierarchy and whitespace, not project tiles.
-    body.extend([
-        f'<path d="M 674 86 V 780" class="rule"/>',
-        _text(706, 104, "FOCUS", size=12, color="accent", weight=700),
-    ])
-    focus_y = 136
+    focus_y = 256
     for focus in profile.get("focus", []):
-        body.append(_text(706, focus_y, focus["label"].upper(), size=11, color="secondary", weight=600))
-        focus_copy, focus_height = _wrapped(706, focus_y + 21, focus["value"], 30, size=14, color="primary", line_height=19)
+        body.append(_text(right_x, focus_y, f"{str(focus['label']).upper():<10}:", size=11, color="secondary", weight=600))
+        focus_copy, focus_height = _wrapped(right_value_x, focus_y, focus["value"], 24, size=13, color="primary", line_height=18)
         body.append(focus_copy)
-        focus_y += 26 + focus_height
+        focus_y += max(22, focus_height) + 18
+
     research = profile["current_research"]
+    body.extend(_prompt(right_x, 548, "Get-CurrentResearch", command_x=746, path="PS>"))
     body.extend([
-        _text(706, focus_y + 13, "CURRENT RESEARCH", size=12, color="accent", weight=700),
-        _link(706, focus_y + 44, research["name"], research["href"], size=18),
-        _text(706, focus_y + 66, research["status"], size=13, color="secondary", weight=600),
+        _text(right_x, 577, "Project", size=11, color="secondary", weight=600),
+        _text(746, 577, ":", size=11, color="secondary"),
+        _link(762, 577, research["name"], research["href"], size=16),
+        _text(right_x, 599, "Phase", size=11, color="secondary", weight=600),
+        _text(746, 599, ":", size=11, color="secondary"),
+        _text(762, 599, research["status"], size=12, color="secondary", weight=600),
     ])
-    question, _ = _wrapped(706, focus_y + 90, research["question"], 30, size=13, color="primary", line_height=19)
+    question, _ = _wrapped(right_x, 621, f"Question : {research['question']}", 36, size=12, color="primary", line_height=17)
     body.append(question)
+    body.extend(_prompt(right_x, 702, "Get-Stack", command_x=746, path="PS>"))
+    stack, _ = _wrapped(right_x, 729, f"Stack    : {profile['stack']}", 36, size=12, color="primary", line_height=17)
+    body.append(stack)
+    body.append(_terminal_separator(814))
     body.extend([
-        _text(706, 710, "STACK", size=12, color="accent", weight=700),
+        _text(42, 840, "[online]", size=12, color="accent", weight=600),
+        _text(122, 840, f"LAST SYNC / {timestamp}", size=12, color="secondary"),
     ])
-    stack, _ = _wrapped(706, 738, profile["stack"], 31, size=13, color="primary", line_height=19)
-    body.extend([stack, _text(42, 856, f"LAST SYNC / {timestamp}", size=12, color="secondary")])
-    body.append(_text(42, 878, "PS> █", size=13, color="accent", weight=600))
-    return _root(width, height, theme, f"{profile['name']} — profile", "Industrial PowerShell profile card with focus hierarchy, four selected projects, early Vulkan research, stack and Berlin sync time.", body)
+    body.extend(_prompt(42, 875, "█", command_x=285))
+    return _root(width, height, theme, f"{profile['name']} — profile", "PowerShell transcript profile with command prompts, proof-led project output, early Vulkan research, stack and Berlin sync time.", body)
 
 
 def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -> str:
@@ -149,26 +195,38 @@ def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) ->
     x = 20
     timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
     body = _terminal_bar(width, theme)
+    body.extend(_prompt(x, 78, "Get-DeveloperProfile", command_x=170, path="PS C:\\Users\\Jeremy>", size=12))
     body.extend([
-        _text(x, 80, profile["name"], size=25, color="primary", weight=700),
-        _text(x, 105, profile["role"], size=14, color="accent", weight=600),
-        _text(x, 125, profile["location"], size=14, color="secondary"),
-        _text(x, 155, "FOCUS", size=12, color="accent", weight=700),
+        _text(x, 101, "Name", size=11, color="secondary", weight=600),
+        _text(100, 101, ":", size=11, color="secondary"),
+        _text(119, 101, profile["name"], size=14, color="primary", weight=600),
+        _text(x, 120, "Role", size=11, color="secondary", weight=600),
+        _text(100, 120, ":", size=11, color="secondary"),
+        _text(119, 120, profile["role"], size=12, color="primary"),
+        _text(x, 139, "Location", size=11, color="secondary", weight=600),
+        _text(100, 139, ":", size=11, color="secondary"),
+        _text(119, 139, profile["location"], size=12, color="primary"),
+        _text(x, 158, "Status", size=11, color="secondary", weight=600),
+        _text(100, 158, ":", size=11, color="secondary"),
+        _text(119, 158, "[online]", size=12, color="accent", weight=600),
+        _terminal_separator(177, x1=x, x2=width - x),
     ])
-    focus_y = 178
+
+    body.extend(_prompt(x, 201, "Get-Focus", command_x=66, path="PS>", size=12))
+    focus_y = 224
     compact_focus = {
-        "Primary": "PRIMARY / ML systems / Comp. Engineering",
-        "Secondary": "SECONDARY / Embedded / hardware-software",
-        "Emerging": "EMERGING / GPU / Vulkan / PyTorch systems",
-        "Supporting": "SUPPORTING / Computer Vision / Full-stack / AI Agents",
+        "Primary": "ML systems / Computer Engineering",
+        "Secondary": "Embedded / hardware-software integration",
+        "Emerging": "GPU / Vulkan / PyTorch systems",
+        "Supporting": "Computer Vision / Full-stack / AI Agents",
     }
     for focus in profile.get("focus", []):
-        focus_copy, height = _wrapped(x, focus_y, compact_focus.get(focus["label"], f"{focus['label'].upper()} / {focus['value']}"), 42, size=14, color="primary", line_height=18)
+        focus_copy, height = _wrapped(x, focus_y, f"{str(focus['label']).upper():<10} : {compact_focus.get(focus['label'], focus['value'])}", 53, size=12, color="primary", line_height=15)
         body.append(focus_copy)
-        focus_y += max(18, height)
-    work_heading_y = focus_y + 5
-    body.append(_text(x, work_heading_y, "SELECTED WORK", size=12, color="accent", weight=700))
-    y = work_heading_y + 29
+        focus_y += height
+    work_heading_y = focus_y + 7
+    body.extend(_prompt(x, work_heading_y, "Get-SelectedWork", command_x=66, path="PS>", size=12))
+    y = work_heading_y + 25
     mobile_evidence = {
         "MIRA": "90.6% mAP50; EXP-019: 90.58%; 415-image validation split",
         "NIMBL": "Local context; request budgets; persistent sessions; benchmarks",
@@ -182,34 +240,36 @@ def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) ->
         "ESP32-S3 Alarm Clock": "Basic ESP32 serial tested; full-board bring-up not documented",
     }
     for index, work in enumerate(profile.get("selected_work", []), start=1):
-        body.append(_text(x, y, f"{index:02d}", size=11, color="secondary", weight=600))
-        body.append(_link(x + 37, y, work["name"], work["href"], size=16))
-        meta, meta_height = _wrapped(x + 37, y + 19, mobile_meta.get(work["name"], f"{work['area']}  /  {work['status']}"), 34, size=13, color="secondary", line_height=15)
-        proof, proof_height = _wrapped(x + 37, y + 20 + meta_height, mobile_evidence.get(work["name"], work["proof"]), 34, size=14, color="primary", line_height=16)
+        body.append(_text(x, y, f"[{index:02d}]", size=10, color="secondary", weight=600))
+        body.append(_link(x + 37, y, work["name"], work["href"], size=15))
+        meta, meta_height = _wrapped(x + 37, y + 18, f"STATUS : {mobile_meta.get(work['name'], work['status'])}", 47, size=11, color="secondary", line_height=13)
+        proof, proof_height = _wrapped(x + 37, y + 19 + meta_height, f"PROOF  : {mobile_evidence.get(work['name'], work['proof'])}", 47, size=12, color="primary", line_height=14)
         body.extend([meta, proof])
-        y += 28 + meta_height + proof_height
-        body.append(f'<path d="M {x} {y - 18} H {width - x}" class="rule"/>')
+        divider_y = y + 20 + meta_height + proof_height
+        body.append(_terminal_separator(divider_y, x1=x, x2=width - x))
+        y = divider_y + 15
 
     research = profile["current_research"]
+    body.extend(_prompt(x, y, "Get-CurrentResearch", command_x=66, path="PS>", size=12))
     body.extend([
-        _text(x, y + 3, "CURRENT RESEARCH", size=12, color="accent", weight=700),
-        _link(x, y + 29, research["name"], research["href"], size=16),
-        _text(x + 91, y + 29, research["status"], size=13, color="secondary", weight=600),
+        _link(x, y + 23, research["name"], research["href"], size=15),
+        _text(111, y + 23, research["status"], size=11, color="secondary", weight=600),
     ])
-    question, question_height = _wrapped(x, y + 51, research["question"], 40, size=14, color="primary", line_height=17)
+    question, question_height = _wrapped(x, y + 43, f"QUESTION : {research['question']}", 48, size=12, color="primary", line_height=14)
     body.append(question)
-    stack_y = y + 51 + question_height + 8
-    body.extend([_text(x, stack_y, "STACK", size=12, color="accent", weight=700)])
-    stack, stack_height = _wrapped(x, stack_y + 18, profile["stack"], 34, size=14, color="primary", line_height=17)
+    stack_y = y + 43 + question_height + 7
+    body.extend(_prompt(x, stack_y, "Get-Stack", command_x=66, path="PS>", size=12))
+    stack, stack_height = _wrapped(x, stack_y + 20, f"STACK : {profile['stack']}", 47, size=12, color="primary", line_height=14)
     body.extend([
         stack,
-        _text(x, stack_y + 22 + stack_height, f"LAST SYNC / {timestamp}", size=11, color="secondary"),
-        _text(x, stack_y + 39 + stack_height, "PS> █", size=13, color="accent", weight=600),
+        _text(x, stack_y + 24 + stack_height, "[online]", size=11, color="accent", weight=600),
+        _text(82, stack_y + 24 + stack_height, f"LAST SYNC / {timestamp}", size=11, color="secondary"),
     ])
-    height = stack_y + 49 + stack_height
-    if height > 860:
-        raise ValueError(f"mobile profile content exceeds 860 units ({height})")
-    return _root(width, height, theme, f"{profile['name']} — profile", "Compact PowerShell profile card with focus hierarchy, four selected projects, early Vulkan research, stack and Berlin sync time.", body)
+    body.extend(_prompt(x, stack_y + 42 + stack_height, "█", command_x=66, path="PS>", size=12))
+    height = stack_y + 54 + stack_height
+    if height > 880:
+        raise ValueError(f"mobile profile content exceeds 880 units ({height})")
+    return _root(width, height, theme, f"{profile['name']} — profile", "Compact PowerShell transcript with command prompts, selected projects, early Vulkan research, stack and Berlin sync time.", body)
 
 
 def _render(profile: dict[str, Any], theme: dict[str, str], *, mobile: bool, now: dt.datetime) -> str:
