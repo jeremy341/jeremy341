@@ -1,7 +1,7 @@
 <div align="center">
 <picture>
-<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=1f70f15f22f0">
-<img width="100%" alt="Jeremy Darko terminal profile showing ML systems and embedded computing, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=69d8e25ca5cb">
+<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=3432fc4974a4">
+<img width="100%" alt="Monochrome Windows PowerShell profile for Jeremy Darko, with commands and output for focus, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=9035a707d84e">
 </picture>
 </div>
 

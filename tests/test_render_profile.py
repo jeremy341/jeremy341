@@ -84,10 +84,7 @@ class ProfileLayoutTests(unittest.TestCase):
         renderer = load_renderer()
         variants = renderer.render_svg_variants(renderer.load_profile_data(PROFILE_DATA), FIXED_BERLIN_TIME)
         for svg in variants.values():
-            self.assertTrue(
-                "PS C:\\Users\\Jeremy\\portfolio&gt;" in svg
-                or "PS C:\\Users\\Jeremy&gt;" in svg
-            )
+            self.assertIn("PS C:\\Users\\Jeremy&gt;", svg)
             for command in ("Get-DeveloperProfile", "Get-Focus", "Get-SelectedWork", "Get-CurrentResearch"):
                 self.assertIn(command, svg)
             self.assertIn("[online]", svg)
@@ -113,10 +110,10 @@ class ProfileLayoutTests(unittest.TestCase):
         proof_lines = [
             node.text or ""
             for node in root.findall(f"{{{SVG_NS}}}text")
-            if node.get("x") == "83" and "X" in (node.text or "")
+            if node.get("x") == "146" and "X" in (node.text or "")
         ]
         self.assertGreater(len(proof_lines), 1)
-        self.assertTrue(all(len(line) <= 68 for line in proof_lines))
+        self.assertTrue(all(len(line) <= 112 for line in proof_lines))
 
     def test_mobile_variants_include_the_torchvk_research_question(self):
         module = load_renderer()
@@ -143,11 +140,11 @@ class ProfileLayoutTests(unittest.TestCase):
                 with self.subTest(filename=filename, next_title=next_title):
                     evidence_y = next(
                         int(node.get("y")) for node in text_nodes
-                        if node.get("x") == "57" and previous_evidence in (node.text or "")
+                        if previous_evidence in (node.text or "")
                     )
                     title_y = next(
                         int(node.get("y")) for node in text_nodes
-                        if node.get("x") == "57" and (node.text or "") == next_title
+                        if (node.text or "") == next_title
                     )
                     self.assertGreaterEqual(title_y - evidence_y, 24)
 

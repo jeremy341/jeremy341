@@ -18,12 +18,13 @@ PROFILE_DATA = ROOT / "scripts" / "profile_data.json"
 BERLIN = ZoneInfo("Europe/Berlin")
 SVG_NS = "http://www.w3.org/2000/svg"
 
-# Dark and light files intentionally retain the same graphite terminal identity.
+# All four files use the same monochrome PowerShell palette on GitHub light and dark pages.
 THEMES = {
-    "dark": {"background": "#0B0F12", "panel": "#121A1F", "primary": "#F1F6F8", "secondary": "#A8B6BC", "rule": "#2B3940", "accent": "#52D7F2"},
-    "light": {"background": "#0B0F12", "panel": "#121A1F", "primary": "#F1F6F8", "secondary": "#A8B6BC", "rule": "#2B3940", "accent": "#52D7F2"},
+    "dark": {"background": "#000000", "panel": "#171717", "primary": "#FFFFFF", "secondary": "#B8B8B8", "rule": "#565656", "accent": "#FFFFFF"},
+    "light": {"background": "#000000", "panel": "#171717", "primary": "#FFFFFF", "secondary": "#B8B8B8", "rule": "#565656", "accent": "#FFFFFF"},
 }
 FONT_STACK = "'Cascadia Code','JetBrains Mono',Consolas,monospace"
+PROMPT = "PS C:\\Users\\Jeremy>"
 
 
 def load_profile_data(path: Path) -> dict[str, object]:
@@ -60,15 +61,21 @@ def _wrapped(x: int, y: int, value: str, max_chars: int, *, size: int = 14, colo
     return markup, len(rows) * step
 
 
+def _property(x: int, y: int, label: str, value: object, *, value_x: int, max_chars: int, size: int = 13, line_height: int = 17, color: str = "primary") -> tuple[list[str], int]:
+    label_text = _text(x, y, f"{label:<11} :", size=size, color="secondary")
+    value_text, value_height = _wrapped(value_x, y, str(value), max_chars, size=size, color=color, line_height=line_height)
+    return [label_text, value_text], max(line_height, value_height)
+
+
 def _link(x: int, y: int, value: object, href: object, *, size: int = 17) -> str:
-    return f'<a href="{_e(href)}">{_text(x, y, value, size=size, color="accent", weight=600)}</a>'
+    return f'<a href="{_e(href)}">{_text(x, y, value, size=size, color="primary", weight=600)}</a>'
 
 
 def _root(width: int, height: int, theme: dict[str, str], title: str, description: str, body: list[str]) -> str:
     style = (
         f'<style>text{{font-family:{FONT_STACK}}}.primary{{fill:{theme["primary"]}}}'
         f'.secondary{{fill:{theme["secondary"]}}}.accent{{fill:{theme["accent"]}}}'
-        f'.rule{{stroke:{theme["rule"]}}}a{{text-decoration:none}}</style>'
+        f'.rule{{stroke:{theme["rule"]}}}a text{{text-decoration:underline;text-decoration-color:{theme["secondary"]};text-underline-offset:2px}}</style>'
     )
     content = [
         f'<svg xmlns="{SVG_NS}" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-labelledby="card-title card-desc">',
@@ -89,187 +96,188 @@ def _prompt(
     command: str,
     *,
     command_x: int,
-    path: str = "PS C:\\Users\\Jeremy\\portfolio>",
+    path: str = PROMPT,
     size: int = 13,
 ) -> list[str]:
     """Render a prompt and command as two aligned terminal transcript cells."""
     return [
-        _text(x, y, path, size=size, color="accent", weight=600),
+        _text(x, y, path, size=size, color="primary", weight=600),
         _text(command_x, y, command, size=size, color="primary", weight=600),
     ]
 
 
-def _terminal_bar(width: int, theme: dict[str, str], timestamp: str | None = None) -> list[str]:
-    """Render Windows Terminal chrome without macOS-style traffic lights."""
+def _terminal_bar(width: int, theme: dict[str, str]) -> list[str]:
+    """Windows Terminal title bar with an active PowerShell tab."""
     body = [
-        f'<rect x="1" y="1" width="{width - 2}" height="54" fill="{theme["panel"]}"/>',
-        f'<path d="M 1 54 H {width - 1}" class="rule"/>',
-        f'<rect x="18" y="13" width="28" height="28" rx="3" fill="{theme["background"]}" stroke="{theme["accent"]}"/>',
-        _text(24, 32, ">_", size=13, color="accent", weight=700),
-        _text(58, 31, "PowerShell 7.5.2", size=15, color="primary", weight=600),
-        f'<path d="M {width - 90} 1 V 55 M {width - 60} 1 V 55 M {width - 30} 1 V 55" class="rule"/>',
-        f'<path d="M {width - 75} 27 h12 M {width - 47} 31 l5 -5 5 5 M {width - 20} 24 l8 8 M {width - 12} 24 l-8 8" fill="none" class="secondary" stroke="{theme["secondary"]}" stroke-width="1.5"/>',
+        f'<rect x="1" y="1" width="{width - 2}" height="48" fill="{theme["panel"]}"/>',
+        f'<path d="M 1 48 H {width - 1}" class="rule"/>',
+        f'<rect x="8" y="5" width="220" height="38" fill="{theme["background"]}"/>',
+        _text(18, 29, ">_", size=12, color="primary", weight=700),
+        _text(48, 29, "PowerShell 7.5.2", size=14, color="primary", weight=600),
+        _text(244, 29, "+", size=17, color="primary", weight=400),
+        _text(271, 28, "v", size=12, color="secondary", weight=600),
     ]
-    if timestamp and width >= 700:
-        body.insert(5, _text(width - 305, 31, f"LAST SYNC / {timestamp}", size=11, color="secondary"))
+    if width >= 700:
+        controls_x = width - 138
+        body.extend([
+            f'<path d="M {controls_x} 1 V 49 M {controls_x + 46} 1 V 49 M {controls_x + 92} 1 V 49" class="rule"/>',
+            _text(controls_x + 18, 29, "—", size=14, color="secondary"),
+            f'<rect x="{controls_x + 62}" y="16" width="11" height="11" fill="none" stroke="{theme["secondary"]}"/>',
+            _text(controls_x + 107, 29, "×", size=14, color="secondary"),
+        ])
     return body
 
 
-def _terminal_separator(y: int, *, x1: int = 42, x2: int = 958) -> str:
-    return f'<path d="M {x1} {y} H {x2}" class="rule"/>'
-
-
 def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -> str:
-    width, height = 1000, 900
+    width = 1000
     timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
-    body = _terminal_bar(width, theme, timestamp)
-    body.extend(_prompt(42, 86, "Get-DeveloperProfile", command_x=285))
-    body.extend([
-        _text(42, 112, "Name", size=12, color="secondary", weight=600),
-        _text(138, 112, ":", size=12, color="secondary"),
-        _text(158, 112, profile["name"], size=15, color="primary", weight=600),
-        _text(42, 134, "Role", size=12, color="secondary", weight=600),
-        _text(138, 134, ":", size=12, color="secondary"),
-        _text(158, 134, profile["role"], size=13, color="primary"),
-        _text(42, 156, "Location", size=12, color="secondary", weight=600),
-        _text(138, 156, ":", size=12, color="secondary"),
-        _text(158, 156, profile["location"], size=13, color="primary"),
-        _text(42, 178, "Status", size=12, color="secondary", weight=600),
-        _text(138, 178, ":", size=12, color="secondary"),
-        _text(158, 178, "[online]  profile snapshot", size=13, color="accent", weight=600),
-        _terminal_separator(199),
-    ])
+    body = _terminal_bar(width, theme)
+    x, value_x = 32, 150
+    y = 76
+    body.extend(_prompt(x, y, "Get-DeveloperProfile | Format-List", command_x=190, size=13))
+    y += 23
+    profile_fields = (
+        ("Name", profile["name"]),
+        ("Role", profile["role"]),
+        ("Location", profile["location"]),
+        ("Status", "[online]"),
+        ("LastSync", timestamp),
+    )
+    for label, value in profile_fields:
+        lines, line_height = _property(x, y, label, value, value_x=value_x, max_chars=112, size=12, line_height=16)
+        body.extend(lines)
+        y += line_height + 1
 
-    left_x, left_value_x = 42, 83
-    right_x, right_value_x = 658, 760
-    body.extend(_prompt(left_x, 225, "Get-SelectedWork", command_x=285))
-    body.extend(_prompt(right_x, 225, "Get-Focus", command_x=746, path="PS>"))
-
-    y = 256
-    for index, work in enumerate(profile.get("selected_work", []), start=1):
-        body.append(_text(left_x, y, f"[{index:02d}]", size=11, color="secondary", weight=600))
-        body.append(_link(left_value_x, y, work["name"], work["href"], size=16))
-        meta, meta_height = _wrapped(left_value_x, y + 20, f"STATUS : {work['status']}", 58, size=12, color="secondary", line_height=16)
-        proof_text = work["proof"]
-        if work["name"] == "MIRA":
-            proof_text += "; 1,375-image test split not evaluated"
-        proof, proof_height = _wrapped(left_value_x, y + 21 + meta_height, f"PROOF  : {proof_text}", 61, size=12, color="primary", line_height=16)
-        body.extend([meta, proof])
-        divider_y = y + 28 + meta_height + proof_height
-        body.append(_terminal_separator(divider_y, x1=left_x, x2=610))
-        y = divider_y + 25
-
-    focus_y = 256
+    y += 8
+    body.extend(_prompt(x, y, "Get-Focus | Format-List", command_x=190, size=13))
+    y += 23
     for focus in profile.get("focus", []):
-        body.append(_text(right_x, focus_y, f"{str(focus['label']).upper():<10}:", size=11, color="secondary", weight=600))
-        focus_copy, focus_height = _wrapped(right_value_x, focus_y, focus["value"], 24, size=13, color="primary", line_height=18)
-        body.append(focus_copy)
-        focus_y += max(22, focus_height) + 18
+        lines, line_height = _property(x, y, focus["label"], focus["value"], value_x=value_x, max_chars=112, size=12, line_height=16)
+        body.extend(lines)
+        y += line_height + 1
 
+    y += 8
+    body.extend(_prompt(x, y, "Get-SelectedWork | Format-List", command_x=190, size=13))
+    y += 23
+    for work in profile.get("selected_work", []):
+        body.append(_text(x, y, "Name       :", size=12, color="secondary"))
+        body.append(_link(value_x, y, work["name"], work["href"], size=12))
+        y += 17
+        for label in ("area", "status", "proof"):
+            value = work["area"] if label == "area" else work[label]
+            if work["name"] == "MIRA" and label == "proof":
+                value += "; independent 1,375-image test split not evaluated"
+            if label == "proof":
+                body.append(_text(x, y, "Proof      :", size=12, color="secondary"))
+                proof, proof_height = _wrapped(value_x, y, value, 112, size=12, color="primary", line_height=16)
+                body.append(proof)
+                y += proof_height
+            else:
+                lines, line_height = _property(x, y, label.title(), value, value_x=value_x, max_chars=112, size=12, line_height=16)
+                body.extend(lines)
+                y += line_height
+        y += 9
+
+    y += 2
     research = profile["current_research"]
-    body.extend(_prompt(right_x, 548, "Get-CurrentResearch", command_x=746, path="PS>"))
-    body.extend([
-        _text(right_x, 577, "Project", size=11, color="secondary", weight=600),
-        _text(746, 577, ":", size=11, color="secondary"),
-        _link(762, 577, research["name"], research["href"], size=16),
-        _text(right_x, 599, "Phase", size=11, color="secondary", weight=600),
-        _text(746, 599, ":", size=11, color="secondary"),
-        _text(762, 599, research["status"], size=12, color="secondary", weight=600),
-    ])
-    question, _ = _wrapped(right_x, 621, f"Question : {research['question']}", 36, size=12, color="primary", line_height=17)
-    body.append(question)
-    body.extend(_prompt(right_x, 702, "Get-Stack", command_x=746, path="PS>"))
-    stack, _ = _wrapped(right_x, 729, f"Stack    : {profile['stack']}", 36, size=12, color="primary", line_height=17)
-    body.append(stack)
-    body.append(_terminal_separator(814))
-    body.extend([
-        _text(42, 840, "[online]", size=12, color="accent", weight=600),
-        _text(122, 840, f"LAST SYNC / {timestamp}", size=12, color="secondary"),
-    ])
-    body.extend(_prompt(42, 875, "█", command_x=285))
-    return _root(width, height, theme, f"{profile['name']} — profile", "PowerShell transcript profile with command prompts, proof-led project output, early Vulkan research, stack and Berlin sync time.", body)
+    body.extend(_prompt(x, y, "Get-CurrentResearch | Format-List", command_x=190, size=13))
+    y += 23
+    body.append(_text(x, y, "Project    :", size=12, color="secondary"))
+    body.append(_link(value_x, y, research["name"], research["href"], size=12))
+    y += 17
+    for label, value in (("Phase", research["status"]), ("Question", research["question"])):
+        lines, line_height = _property(x, y, label, value, value_x=value_x, max_chars=112, size=12, line_height=16)
+        body.extend(lines)
+        y += line_height
+
+    y += 8
+    body.extend(_prompt(x, y, "Get-Toolchain | Format-List", command_x=190, size=13))
+    y += 23
+    lines, line_height = _property(x, y, "Stack", profile["stack"], value_x=value_x, max_chars=112, size=12, line_height=16)
+    body.extend(lines)
+    y += line_height + 12
+    body.extend(_prompt(x, y, "█", command_x=190, size=13))
+    height = y + 32
+    return _root(width, height, theme, f"{profile['name']} — PowerShell profile", "Monochrome Windows PowerShell transcript with developer profile, focus, selected project objects, TorchVK research and toolchain.", body)
 
 
 def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -> str:
     width = 400
-    x = 20
+    x, value_x = 20, 100
     timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
     body = _terminal_bar(width, theme)
-    body.extend(_prompt(x, 78, "Get-DeveloperProfile", command_x=170, path="PS C:\\Users\\Jeremy>", size=12))
-    body.extend([
-        _text(x, 101, "Name", size=11, color="secondary", weight=600),
-        _text(100, 101, ":", size=11, color="secondary"),
-        _text(119, 101, profile["name"], size=14, color="primary", weight=600),
-        _text(x, 120, "Role", size=11, color="secondary", weight=600),
-        _text(100, 120, ":", size=11, color="secondary"),
-        _text(119, 120, profile["role"], size=12, color="primary"),
-        _text(x, 139, "Location", size=11, color="secondary", weight=600),
-        _text(100, 139, ":", size=11, color="secondary"),
-        _text(119, 139, profile["location"], size=12, color="primary"),
-        _text(x, 158, "Status", size=11, color="secondary", weight=600),
-        _text(100, 158, ":", size=11, color="secondary"),
-        _text(119, 158, "[online]", size=12, color="accent", weight=600),
-        _terminal_separator(177, x1=x, x2=width - x),
-    ])
+    y = 72
+    body.extend(_prompt(x, y, "Get-DeveloperProfile", command_x=154, size=11))
+    y += 20
+    profile_fields = (
+        ("Name", profile["name"]),
+        ("Role", profile["role"]),
+        ("Location", profile["location"]),
+        ("Status", "[online]"),
+        ("LastSync", timestamp),
+    )
+    for label, value in profile_fields:
+        lines, line_height = _property(x, y, label, value, value_x=value_x, max_chars=43, size=11, line_height=14)
+        body.extend(lines)
+        y += line_height
 
-    body.extend(_prompt(x, 201, "Get-Focus", command_x=66, path="PS>", size=12))
-    focus_y = 224
     compact_focus = {
         "Primary": "ML systems / Computer Engineering",
         "Secondary": "Embedded / hardware-software integration",
-        "Emerging": "GPU / Vulkan / PyTorch systems",
-        "Supporting": "Computer Vision / Full-stack / AI Agents",
+        "Emerging": "GPU compute / Vulkan / PyTorch systems",
+        "Supporting": "Computer vision / Full-stack / AI Agents",
     }
+    y += 8
+    body.extend(_prompt(x, y, "Get-Focus", command_x=154, size=11))
+    y += 20
     for focus in profile.get("focus", []):
-        focus_copy, height = _wrapped(x, focus_y, f"{str(focus['label']).upper():<10} : {compact_focus.get(focus['label'], focus['value'])}", 53, size=12, color="primary", line_height=15)
-        body.append(focus_copy)
-        focus_y += height
-    work_heading_y = focus_y + 7
-    body.extend(_prompt(x, work_heading_y, "Get-SelectedWork", command_x=66, path="PS>", size=12))
-    y = work_heading_y + 25
-    mobile_evidence = {
-        "MIRA": "90.6% mAP50; EXP-019: 90.58%; 415-image validation split",
+        lines, line_height = _property(x, y, focus["label"], compact_focus.get(focus["label"], focus["value"]), value_x=value_x, max_chars=43, size=11, line_height=14)
+        body.extend(lines)
+        y += line_height
+
+    y += 8
+    body.extend(_prompt(x, y, "Get-SelectedWork", command_x=154, size=11))
+    y += 20
+    mobile_proof = {
+        "MIRA": "415-image validation split: 90.6% mAP50; EXP-019 90.58%; independent 1,375-image test not evaluated",
         "Poorup": "Real-time multiplayer; reconnect recovery; server rules; CI",
-        "FluidicStudio": "PyQt6 pumps; sensor data; camera workflows; saved sessions",
-        "ESP32-S3 Alarm Clock": "PCB; C++ firmware; TFT; WebSerial config",
+        "FluidicStudio": "PyQt6 pumps; sensors; camera workflows; saved sessions",
+        "ESP32-S3 Alarm Clock": "Custom PCB; C++ firmware; TFT; WebSerial; basic serial test only",
     }
-    mobile_meta = {
-        "MIRA": "CV / ML / validation only; 1,375-image test split not evaluated",
-        "Poorup": "Node.js / Socket.IO / Open-source prototype",
-        "FluidicStudio": "Lab software / core workflows; pump-driver detection experimental",
-        "ESP32-S3 Alarm Clock": "Basic ESP32 serial tested; full-board bring-up not documented",
-    }
-    for index, work in enumerate(profile.get("selected_work", []), start=1):
-        body.append(_text(x, y, f"[{index:02d}]", size=10, color="secondary", weight=600))
-        body.append(_link(x + 37, y, work["name"], work["href"], size=15))
-        meta, meta_height = _wrapped(x + 37, y + 18, f"STATUS : {mobile_meta.get(work['name'], work['status'])}", 47, size=11, color="secondary", line_height=13)
-        proof, proof_height = _wrapped(x + 37, y + 19 + meta_height, f"PROOF  : {mobile_evidence.get(work['name'], work['proof'])}", 47, size=12, color="primary", line_height=14)
-        body.extend([meta, proof])
-        divider_y = y + 20 + meta_height + proof_height
-        body.append(_terminal_separator(divider_y, x1=x, x2=width - x))
-        y = divider_y + 15
+    for work in profile.get("selected_work", []):
+        body.append(_text(x, y, "Name       :", size=11, color="secondary"))
+        body.append(_link(value_x, y, work["name"], work["href"], size=12))
+        y += 15
+        lines, line_height = _property(x, y, "Status", work["status"], value_x=value_x, max_chars=43, size=11, line_height=14)
+        body.extend(lines)
+        y += line_height
+        lines, line_height = _property(x, y, "Proof", mobile_proof.get(work["name"], work["proof"]), value_x=value_x, max_chars=43, size=11, line_height=14)
+        body.extend(lines)
+        y += line_height + 8
 
     research = profile["current_research"]
-    body.extend(_prompt(x, y, "Get-CurrentResearch", command_x=66, path="PS>", size=12))
-    body.extend([
-        _link(x, y + 23, research["name"], research["href"], size=15),
-        _text(111, y + 23, research["status"], size=11, color="secondary", weight=600),
-    ])
-    question, question_height = _wrapped(x, y + 43, f"QUESTION : {research['question']}", 48, size=12, color="primary", line_height=14)
-    body.append(question)
-    stack_y = y + 43 + question_height + 7
-    body.extend(_prompt(x, stack_y, "Get-Stack", command_x=66, path="PS>", size=12))
-    stack, stack_height = _wrapped(x, stack_y + 20, f"STACK : {profile['stack']}", 47, size=12, color="primary", line_height=14)
-    body.extend([
-        stack,
-        _text(x, stack_y + 24 + stack_height, "[online]", size=11, color="accent", weight=600),
-        _text(82, stack_y + 24 + stack_height, f"LAST SYNC / {timestamp}", size=11, color="secondary"),
-    ])
-    body.extend(_prompt(x, stack_y + 42 + stack_height, "█", command_x=66, path="PS>", size=12))
-    height = stack_y + 54 + stack_height
+    y += 3
+    body.extend(_prompt(x, y, "Get-CurrentResearch", command_x=154, size=11))
+    y += 20
+    body.append(_text(x, y, "Project    :", size=11, color="secondary"))
+    body.append(_link(value_x, y, research["name"], research["href"], size=12))
+    y += 15
+    for label, value in (("Phase", research["status"]), ("Question", research["question"])):
+        lines, line_height = _property(x, y, label, value, value_x=value_x, max_chars=43, size=11, line_height=14)
+        body.extend(lines)
+        y += line_height
+
+    y += 8
+    body.extend(_prompt(x, y, "Get-Toolchain", command_x=154, size=11))
+    y += 20
+    lines, line_height = _property(x, y, "Stack", profile["stack"], value_x=value_x, max_chars=43, size=11, line_height=14)
+    body.extend(lines)
+    y += line_height + 12
+    body.extend(_prompt(x, y, "█", command_x=154, size=11))
+    height = y + 20
     if height > 880:
         raise ValueError(f"mobile profile content exceeds 880 units ({height})")
-    return _root(width, height, theme, f"{profile['name']} — profile", "Compact PowerShell transcript with command prompts, selected projects, early Vulkan research, stack and Berlin sync time.", body)
+    return _root(width, height, theme, f"{profile['name']} — PowerShell profile", "Compact monochrome Windows PowerShell transcript with developer profile, focus, selected project objects, TorchVK research and toolchain.", body)
 
 
 def _render(profile: dict[str, Any], theme: dict[str, str], *, mobile: bool, now: dt.datetime) -> str:
