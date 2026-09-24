@@ -25,6 +25,7 @@ THEMES = {
 }
 FONT_STACK = "'Cascadia Code','JetBrains Mono',Consolas,monospace"
 PROMPT = "PS C:\\Users\\Jeremy>"
+FONT_BOOST = 4
 
 
 def load_profile_data(path: Path) -> dict[str, object]:
@@ -51,20 +52,28 @@ def wrap_svg_text(value: str, max_chars: int) -> list[str]:
 
 
 def _text(x: int, y: int, value: object, *, size: int = 16, color: str = "primary", weight: int = 400) -> str:
-    return f'<text x="{x}" y="{y}" class="{color}" font-size="{size}" font-weight="{weight}">{_e(value)}</text>'
+    return f'<text x="{x}" y="{y}" class="{color}" font-size="{size + FONT_BOOST}" font-weight="{weight}">{_e(value)}</text>'
 
 
 def _wrapped(x: int, y: int, value: str, max_chars: int, *, size: int = 14, color: str = "primary", line_height: int | None = None, weight: int = 400) -> tuple[str, int]:
-    step = line_height if line_height is not None else size + 6
-    rows = wrap_svg_text(value, max_chars)
+    step = (line_height if line_height is not None else size + 6) + FONT_BOOST
+    effective_max_chars = max(1, max_chars * size // (size + FONT_BOOST))
+    rows = wrap_svg_text(value, effective_max_chars)
     markup = "".join(_text(x, y + index * step, row, size=size, color=color, weight=weight) for index, row in enumerate(rows))
     return markup, len(rows) * step
 
 
 def _property(x: int, y: int, label: str, value: object, *, value_x: int, max_chars: int, size: int = 13, line_height: int = 17, color: str = "primary") -> tuple[list[str], int]:
-    label_text = _text(x, y, f"{label:<11} :", size=size, color="secondary")
+    label_text = _text(x, y, f"{label:<9} :", size=size, color="secondary")
     value_text, value_height = _wrapped(value_x, y, str(value), max_chars, size=size, color=color, line_height=line_height)
-    return [label_text, value_text], max(line_height, value_height)
+    return [label_text, value_text], max(line_height + FONT_BOOST, value_height)
+
+
+def _mobile_property(x: int, y: int, label: str, value: object, *, color: str = "primary") -> tuple[list[str], int]:
+    """Render a full-width, wrapped property for the larger phone typography."""
+    inline_value = f"{label.upper():<9} : {value}"
+    markup, height = _wrapped(x, y, inline_value, 52, size=11, color=color, line_height=13)
+    return [markup], height
 
 
 def _link(x: int, y: int, value: object, href: object, *, size: int = 17) -> str:
@@ -132,9 +141,9 @@ def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -
     width = 1000
     timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
     body = _terminal_bar(width, theme)
-    x, value_x = 32, 150
+    x, value_x = 32, 168
     y = 76
-    body.extend(_prompt(x, y, "Get-DeveloperProfile | Format-List", command_x=190, size=13))
+    body.extend(_prompt(x, y, "Get-DeveloperProfile | Format-List", command_x=250, size=13))
     y += 23
     profile_fields = (
         ("Name", profile["name"]),
@@ -149,7 +158,7 @@ def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -
         y += line_height + 1
 
     y += 8
-    body.extend(_prompt(x, y, "Get-Focus | Format-List", command_x=190, size=13))
+    body.extend(_prompt(x, y, "Get-Focus | Format-List", command_x=250, size=13))
     y += 23
     for focus in profile.get("focus", []):
         lines, line_height = _property(x, y, focus["label"], focus["value"], value_x=value_x, max_chars=112, size=12, line_height=16)
@@ -157,12 +166,12 @@ def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -
         y += line_height + 1
 
     y += 8
-    body.extend(_prompt(x, y, "Get-SelectedWork | Format-List", command_x=190, size=13))
+    body.extend(_prompt(x, y, "Get-SelectedWork | Format-List", command_x=250, size=13))
     y += 23
     for work in profile.get("selected_work", []):
         body.append(_text(x, y, "Name       :", size=12, color="secondary"))
         body.append(_link(value_x, y, work["name"], work["href"], size=12))
-        y += 17
+        y += 21
         for label in ("area", "status", "proof"):
             value = work["area"] if label == "area" else work[label]
             if work["name"] == "MIRA" and label == "proof":
@@ -176,22 +185,22 @@ def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -
                 lines, line_height = _property(x, y, label.title(), value, value_x=value_x, max_chars=112, size=12, line_height=16)
                 body.extend(lines)
                 y += line_height
-        y += 9
+        y += 18
 
     y += 2
     research = profile["current_research"]
-    body.extend(_prompt(x, y, "Get-CurrentResearch | Format-List", command_x=190, size=13))
+    body.extend(_prompt(x, y, "Get-CurrentResearch | Format-List", command_x=250, size=13))
     y += 23
     body.append(_text(x, y, "Project    :", size=12, color="secondary"))
     body.append(_link(value_x, y, research["name"], research["href"], size=12))
-    y += 17
+    y += 21
     for label, value in (("Phase", research["status"]), ("Question", research["question"])):
         lines, line_height = _property(x, y, label, value, value_x=value_x, max_chars=112, size=12, line_height=16)
         body.extend(lines)
         y += line_height
 
     y += 8
-    body.extend(_prompt(x, y, "Get-Toolchain | Format-List", command_x=190, size=13))
+    body.extend(_prompt(x, y, "Get-Toolchain | Format-List", command_x=250, size=13))
     y += 23
     lines, line_height = _property(x, y, "Stack", profile["stack"], value_x=value_x, max_chars=112, size=12, line_height=16)
     body.extend(lines)
@@ -203,12 +212,12 @@ def _desktop(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -
 
 def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) -> str:
     width = 400
-    x, value_x = 20, 100
+    x = 20
     timestamp = now.astimezone(BERLIN).strftime("%Y-%m-%d %H:%M %Z")
     body = _terminal_bar(width, theme)
-    y = 72
-    body.extend(_prompt(x, y, "Get-DeveloperProfile", command_x=154, size=11))
-    y += 20
+    y = 68
+    body.extend(_prompt(x, y, "Get-DeveloperProfile", command_x=210, size=11))
+    y += 18
     profile_fields = (
         ("Name", profile["name"]),
         ("Role", profile["role"]),
@@ -217,7 +226,9 @@ def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) ->
         ("LastSync", timestamp),
     )
     for label, value in profile_fields:
-        lines, line_height = _property(x, y, label, value, value_x=value_x, max_chars=43, size=11, line_height=14)
+        if label == "Role":
+            value = "Student · Abitur 2028"
+        lines, line_height = _mobile_property(x, y, label, value)
         body.extend(lines)
         y += line_height
 
@@ -227,50 +238,47 @@ def _mobile(profile: dict[str, Any], theme: dict[str, str], now: dt.datetime) ->
         "Emerging": "GPU compute / Vulkan / PyTorch systems",
         "Supporting": "Computer vision / Full-stack / AI Agents",
     }
-    y += 8
-    body.extend(_prompt(x, y, "Get-Focus", command_x=154, size=11))
-    y += 20
+    y += 6
+    body.extend(_prompt(x, y, "Get-Focus", command_x=210, size=11))
+    y += 18
     for focus in profile.get("focus", []):
-        lines, line_height = _property(x, y, focus["label"], compact_focus.get(focus["label"], focus["value"]), value_x=value_x, max_chars=43, size=11, line_height=14)
+        lines, line_height = _mobile_property(x, y, focus["label"], compact_focus.get(focus["label"], focus["value"]))
         body.extend(lines)
         y += line_height
 
-    y += 8
-    body.extend(_prompt(x, y, "Get-SelectedWork", command_x=154, size=11))
-    y += 20
+    y += 6
+    body.extend(_prompt(x, y, "Get-SelectedWork", command_x=210, size=11))
+    y += 18
     mobile_proof = {
         "MIRA": "415-image validation split: 90.6% mAP50; EXP-019 90.58%; independent 1,375-image test not evaluated",
         "Poorup": "Real-time multiplayer; reconnect recovery; server rules; CI",
         "FluidicStudio": "PyQt6 pumps; sensors; camera workflows; saved sessions",
-        "ESP32-S3 Alarm Clock": "Custom PCB; C++ firmware; TFT; WebSerial; basic serial test only",
     }
     for work in profile.get("selected_work", []):
-        body.append(_text(x, y, "Name       :", size=11, color="secondary"))
-        body.append(_link(value_x, y, work["name"], work["href"], size=12))
-        y += 15
-        lines, line_height = _property(x, y, "Status", work["status"], value_x=value_x, max_chars=43, size=11, line_height=14)
+        body.append(_link(x, y, work["name"], work["href"], size=12))
+        y += 19
+        lines, line_height = _mobile_property(x, y, "Status", work["status"])
         body.extend(lines)
         y += line_height
-        lines, line_height = _property(x, y, "Proof", mobile_proof.get(work["name"], work["proof"]), value_x=value_x, max_chars=43, size=11, line_height=14)
+        lines, line_height = _mobile_property(x, y, "Proof", mobile_proof.get(work["name"], work["proof"]))
         body.extend(lines)
-        y += line_height + 8
+        y += line_height + 10
 
     research = profile["current_research"]
     y += 3
-    body.extend(_prompt(x, y, "Get-CurrentResearch", command_x=154, size=11))
-    y += 20
-    body.append(_text(x, y, "Project    :", size=11, color="secondary"))
-    body.append(_link(value_x, y, research["name"], research["href"], size=12))
-    y += 15
+    body.extend(_prompt(x, y, "Get-CurrentResearch", command_x=210, size=11))
+    y += 18
+    body.append(_link(x, y, research["name"], research["href"], size=12))
+    y += 19
     for label, value in (("Phase", research["status"]), ("Question", research["question"])):
-        lines, line_height = _property(x, y, label, value, value_x=value_x, max_chars=43, size=11, line_height=14)
+        lines, line_height = _mobile_property(x, y, label, value)
         body.extend(lines)
         y += line_height
 
-    y += 8
-    body.extend(_prompt(x, y, "Get-Toolchain", command_x=154, size=11))
-    y += 20
-    lines, line_height = _property(x, y, "Stack", profile["stack"], value_x=value_x, max_chars=43, size=11, line_height=14)
+    y += 6
+    body.extend(_prompt(x, y, "Get-Toolchain", command_x=210, size=11))
+    y += 18
+    lines, line_height = _mobile_property(x, y, "Stack", profile["stack"])
     body.extend(lines)
     y += line_height + 12
     body.extend(_prompt(x, y, "█", command_x=154, size=11))

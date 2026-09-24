@@ -29,13 +29,6 @@
       "status": "Core workflows implemented; pump-driver detection experimental",
       "proof": "PyQt6 pump control, sensor acquisition, camera workflows and session persistence",
       "href": "https://github.com/jeremy341/microdroplets-ui"
-    },
-    {
-      "name": "ESP32-S3 Alarm Clock",
-      "area": "Embedded / PCB",
-      "status": "Prototype design; basic ESP32 serial communication tested, full-board bring-up not documented",
-      "proof": "Custom PCB, C++ firmware, TFT display and WebSerial configuration",
-      "href": "https://github.com/jeremy341/esp32-alarm-clock"
     }
   ],
   "current_research": {

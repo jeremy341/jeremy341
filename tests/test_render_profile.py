@@ -94,8 +94,9 @@ class ProfileLayoutTests(unittest.TestCase):
         module = load_renderer()
         variants = module.render_svg_variants(module.load_profile_data(PROFILE_DATA), FIXED_BERLIN_TIME)
         for svg in variants.values():
-            for text in ("MIRA", "Poorup", "FluidicStudio", "ESP32-S3 Alarm Clock", "TorchVK", "Early research"):
+            for text in ("MIRA", "Poorup", "FluidicStudio", "TorchVK", "Early research"):
                 self.assertIn(text, svg)
+            self.assertNotIn("ESP32-S3 Alarm Clock", svg)
             self.assertNotIn("NIMBL", svg)
             self.assertIn("AI Agents", svg)
             for term in ("Age", "years", "months", "2009-08-12", "Total Commits", "Current Streak", "Hackatime", "Stars", "Repositories", "Added", "Removed"):
@@ -110,7 +111,7 @@ class ProfileLayoutTests(unittest.TestCase):
         proof_lines = [
             node.text or ""
             for node in root.findall(f"{{{SVG_NS}}}text")
-            if node.get("x") == "146" and "X" in (node.text or "")
+            if node.get("x") == "168" and "X" in (node.text or "")
         ]
         self.assertGreater(len(proof_lines), 1)
         self.assertTrue(all(len(line) <= 112 for line in proof_lines))
@@ -129,9 +130,8 @@ class ProfileLayoutTests(unittest.TestCase):
         module = load_renderer()
         variants = module.render_svg_variants(module.load_profile_data(PROFILE_DATA), FIXED_BERLIN_TIME)
         transitions = (
-            ("415-image validation split", "Poorup"),
+            ("90.6% mAP50", "Poorup"),
             ("server rules; CI", "FluidicStudio"),
-            ("workflows; saved sessions", "ESP32-S3 Alarm Clock"),
         )
         for filename in ("profile-mobile-dark.svg", "profile-mobile-light.svg"):
             root = ET.fromstring(variants[filename])
