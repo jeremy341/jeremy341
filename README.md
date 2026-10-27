@@ -2,8 +2,8 @@
 
 <div align="center">
 <picture>
-<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=18e03b79615d">
-<img width="100%" alt="Monochrome Windows PowerShell profile for Jeremy Darko, with commands and output for focus, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=9715a692c9ee">
+<source media="(max-width: 700px)" srcset="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-mobile-dark.svg?v=b232394a0fc1">
+<img width="100%" alt="Monochrome Windows PowerShell profile for Jeremy Darko, with commands and output for focus, selected projects, and TorchVK research" src="https://raw.githubusercontent.com/jeremy341/jeremy341/main/assets/profile-dark.svg?v=68d215da7481">
 </picture>
 </div>
 
